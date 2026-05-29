@@ -2,6 +2,7 @@
     import type { Snippet } from 'svelte'
     import AppHeader from '$lib/components/AppHeader.svelte'
     import AppTabBar from '$lib/components/AppTabBar.svelte'
+    import { TicketViewerHost } from '$lib/components/TicketViewer'
 
     let { children }: { children: Snippet } = $props()
 </script>
@@ -12,4 +13,5 @@
         {@render children()}
     </main>
     <AppTabBar />
+    <TicketViewerHost />
 </div>
