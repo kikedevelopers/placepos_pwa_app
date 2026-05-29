@@ -1,4 +1,6 @@
 export * from './authentication'
+export * from './catalog'
 export * from './dashboard'
+export * from './products'
 export * from './reports'
 export * from './sales'
