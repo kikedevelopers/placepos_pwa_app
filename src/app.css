@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tokens de tema — copia exacta de pos_app (src/styles/global.css).
+ * Valores HSL "H S% L%" (sin envoltura hsl()), consumidos por tailwind como
+ * hsl(var(--token) / <alpha-value>).
+ */
+@layer base {
+    :root {
+        --background: 210 40% 98%;
+        --foreground: 222 47% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+        --primary: 217 91% 50%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 47% 25%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 210 40% 94%;
+        --accent-foreground: 222 47% 11%;
+        --destructive: 0 84% 55%;
+        --destructive-foreground: 0 0% 100%;
+        --success: 158 64% 38%;
+        --success-foreground: 0 0% 100%;
+        --warning: 32 95% 44%;
+        --warning-foreground: 0 0% 100%;
+        --info: 199 89% 45%;
+        --info-foreground: 0 0% 100%;
+        --border: 214 32% 89%;
+        --input: 214 32% 89%;
+        --ring: 217 91% 50%;
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 222 47% 5%;
+        --foreground: 0 0% 100%;
+        --card: 222 47% 11%;
+        --card-foreground: 0 0% 100%;
+        --popover: 222 47% 11%;
+        --popover-foreground: 0 0% 100%;
+        --primary: 213 94% 68%;
+        --primary-foreground: 222 47% 5%;
+        --secondary: 217 33% 17%;
+        --secondary-foreground: 215 20% 65%;
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 217 33% 17%;
+        --accent-foreground: 0 0% 100%;
+        --destructive: 0 91% 71%;
+        --destructive-foreground: 0 0% 100%;
+        --success: 158 64% 52%;
+        --success-foreground: 0 0% 100%;
+        --warning: 43 96% 56%;
+        --warning-foreground: 0 0% 100%;
+        --info: 188 86% 53%;
+        --info-foreground: 0 0% 100%;
+        --border: 215 25% 27%;
+        --input: 217 33% 17%;
+        --ring: 213 94% 68%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    html {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased;
+        font-feature-settings: 'rlig' 1, 'calt' 1;
+        overscroll-behavior-y: none;
+    }
+
+    /* App "tipo móvil": el contenido vive en un lienzo angosto centrado. */
+    #app-shell {
+        @apply mx-auto w-full max-w-[480px] min-h-[100dvh] bg-background relative;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
