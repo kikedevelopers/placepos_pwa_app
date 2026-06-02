@@ -20,7 +20,11 @@ dev-dist
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Logs
 *.log
 npm-debug.log*
+
+# Deploy runtime (certs Let's Encrypt en la VM)
+/certbot

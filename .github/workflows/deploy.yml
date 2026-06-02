@@ -1,0 +1,110 @@
+# =============================================================================
+# Build, push & deploy — PWA PlacePOS
+#
+# 1. Construye la imagen Docker (SPA + nginx) y la publica en GHCR
+#    (ghcr.io/<owner>/<repo>:latest, :sha-<sha>, :<semver>).
+#    La URL del API se hornea en build-time via build-arg PUBLIC_API_URL.
+# 2. Si el push fue a `main`, hace SSH a la VM y corre `./deploy.sh`.
+#
+# Variables/Secrets requeridos (Settings → Secrets and variables → Actions):
+#   VARIABLE  PUBLIC_API_URL    URL del backend pos_api en produccion
+#                               (ej: https://foxpos.kikedevs.com). Se hornea
+#                               en el bundle del SPA al construir.
+#   SECRET    DEPLOY_HOST       IP o dominio de la VM.
+#   SECRET    DEPLOY_USER       Usuario SSH.
+#   SECRET    DEPLOY_SSH_KEY    Clave privada SSH (contenido completo).
+#   SECRET    DEPLOY_PATH       Ruta del repo clonado en la VM (ej: /opt/placepos_pwa_app).
+#   SECRET    GHCR_DEPLOY_TOKEN PAT con scope read:packages (la VM pullea la imagen).
+#
+# Los secrets de deploy viven en el environment "PLACEPOS" (igual que pos_api).
+# =============================================================================
+
+name: Build, push & deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build & push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # URL del API horneada en el SPA. Configurable via repo Variable.
+          build-args: |
+            PUBLIC_API_URL=${{ vars.PUBLIC_API_URL || 'https://foxpos.kikedevs.com' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to VM
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: PLACEPOS
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: GHCR_USERNAME,GHCR_TOKEN,GITHUB_SHA_FOR_DEPLOY
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git config --global --add safe.directory "${{ secrets.DEPLOY_PATH }}"
+            git fetch --all
+            git reset --hard "$GITHUB_SHA_FOR_DEPLOY"
+            ./deploy.sh
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_DEPLOY_TOKEN }}
+          GITHUB_SHA_FOR_DEPLOY: ${{ github.sha }}

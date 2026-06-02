@@ -1,0 +1,110 @@
+# =============================================================================
+# Nginx para la PWA PlacePOS — sirve el SPA estatico (SvelteKit adapter-static)
+# y termina TLS. NO hace reverse-proxy: el navegador llama a pos_api directo
+# (CORS). Solo se sustituye ${DOMAIN} (NGINX_ENVSUBST_TEMPLATE_VARS=DOMAIN).
+#
+# Cache: se usa la directiva `expires` (no `add_header`) para NO romper la
+# herencia de los security headers del bloque server (nginx no fusiona
+# add_header entre niveles; `expires` si convive con la herencia).
+# =============================================================================
+
+# ---------- HTTP 80 ----------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    # ACME challenge — certbot escribe aqui los tokens via webroot.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Health plano del proxy (load balancer / monitor / healthcheck del contenedor).
+    location = /nginx-health {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ---------- HTTPS 443 ----------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # --- TLS ---
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/${DOMAIN}/chain.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 1.1.1.1 8.8.8.8 valid=300s;
+    resolver_timeout 5s;
+
+    # --- Security headers (heredados por las locations que solo usan `expires`) ---
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # --- Compresion ---
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_vary on;
+    gzip_types
+        application/javascript
+        application/json
+        application/manifest+json
+        image/svg+xml
+        text/css
+        text/plain
+        text/xml;
+
+    client_max_body_size 4m;
+
+    # --- ACME challenge tambien en HTTPS ---
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location = /nginx-health {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+
+    # --- Assets con hash de contenido (SvelteKit _app/immutable): cache agresivo ---
+    location /_app/immutable/ {
+        expires max;
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # --- Service worker / manifest / index: revalidar SIEMPRE (no-cache) ---
+    location = /service-worker.js { expires -1; }
+    location = /sw.js { expires -1; }
+    location = /manifest.webmanifest { expires -1; }
+    location = /index.html { expires -1; }
+
+    # --- SPA fallback: todo lo que no es archivo cae en index.html ---
+    location / {
+        expires -1;
+        try_files $uri $uri/ /index.html;
+    }
+}
