@@ -43,7 +43,8 @@
     // Construye el payload de POST /sales (fase 1: ORDER). Copia 1:1 de pos_app.
     const buildSalePayload = (
         cart: CartItem[],
-        customer: { id: number; name: string } | null
+        customer: { id: number; name: string } | null,
+        clientOperationId: string
     ): CreateSalePayload => {
         const total = roundTo(
             cart.reduce((a, c) => a + c.total, 0),
@@ -73,7 +74,8 @@
             profit,
             margin: total > 0 ? roundTo((profit / total) * 100, 4) : 0,
             customer_id: customer?.id ?? null,
-            customer_name: customer?.name ?? null
+            customer_name: customer?.name ?? null,
+            client_operation_id: clientOperationId
         }
     }
 
@@ -99,6 +101,11 @@
     let postOrder = $state<ChargeOrder | null>(null)
     let payOrder = $state<ChargeOrder | null>(null)
     let registerError = $state('')
+
+    // Llave de idempotencia ESTABLE del intento de registro actual. Se genera una
+    // vez, se reusa en reintentos (mismo carrito) y se limpia tras un registro
+    // exitoso. El backend deduplica por ella: un doble-click jamas crea 2 facturas.
+    let registerOperationId: string | null = null
 
     // Fase 1: createSale (POST /sales) crea el ORDER.
     const register = createMutation({ mutationFn: createSale })
@@ -156,14 +163,19 @@
 
     const handleRegister = () => {
         registerError = ''
+        // Guard de doble-submit: si ya hay un registro en vuelo, ignorar el click.
+        if ($register.isPending) return
         const cart = posCart.cart
         const customer = posCart.customer
         if (cart.length === 0) return
+        // Llave estable: se crea una vez por intento y se reusa hasta que el
+        // registro tenga exito (o se reintente con el mismo carrito).
+        if (!registerOperationId) registerOperationId = crypto.randomUUID()
         const captured = roundTo(
             cart.reduce((a, c) => a + c.total, 0),
             2
         )
-        $register.mutate(buildSalePayload(cart, customer), {
+        $register.mutate(buildSalePayload(cart, customer, registerOperationId), {
             onSuccess: (result) => {
                 const charge: ChargeOrder = {
                     invoice_id: result.invoice_id,
@@ -173,9 +185,13 @@
                 }
                 cartOpen = false
                 posCart.clearCart()
+                // Registro exitoso: la proxima venta usa una llave nueva.
+                registerOperationId = null
                 postOrder = charge
             },
             onError: (e) => {
+                // No limpiamos la llave: un reintento debe reusar la misma para
+                // que el backend lo trate como la MISMA venta (idempotente).
                 registerError = getErrorMessage(e) ?? 'No se pudo registrar el pedido.'
             }
         })

@@ -54,6 +54,10 @@ export type CreateSalePayload = {
     margin: number
     customer_id: number | null
     customer_name: string | null
+    // UUID v4 estable por intento de registro: el backend deduplica la creacion
+    // para que un doble-click jamas genere dos facturas. Se reusa en reintentos
+    // y se regenera solo tras un registro exitoso.
+    client_operation_id: string
 }
 
 export type CreateSaleResult = {
