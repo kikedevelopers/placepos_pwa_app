@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { Receipt } from '@lucide/svelte'
-    import ComingSoon from '$lib/components/ComingSoon.svelte'
+    import Expenses from '$lib/modules/Expenses/pages/Expenses/Expenses.svelte'
 </script>
 
-<ComingSoon icon={Receipt} title="Gastos" />
+<Expenses />

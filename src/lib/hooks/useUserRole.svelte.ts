@@ -20,6 +20,15 @@ export const useUserRole = () => {
         get canManage(): boolean {
             const role = this.role
             return role === null ? true : MANAGER_ROLES.includes(role)
+        },
+        /**
+         * Solo el owner (y superadmin) puede anular gastos variables. Mientras el
+         * rol es desconocido (cold start) devuelve `false` para no exponer la
+         * acción destructiva antes de confirmar el rol.
+         */
+        get canVoid(): boolean {
+            const role = this.role
+            return role === 'owner' || role === 'superadmin'
         }
     }
 }
