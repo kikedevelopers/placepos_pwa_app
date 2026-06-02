@@ -13,8 +13,15 @@
 #   SECRET    DEPLOY_HOST       IP o dominio de la VM.
 #   SECRET    DEPLOY_USER       Usuario SSH.
 #   SECRET    DEPLOY_SSH_KEY    Clave privada SSH (contenido completo).
-#   SECRET    DEPLOY_PATH       Ruta del repo clonado en la VM (ej: /opt/placepos_pwa_app).
+#   SECRET    DEPLOY_PATH       Ruta del stack EDGE (pos_api) en la VM, donde
+#                               vive docker-compose.prod.yml (ej: /opt/pos_api).
 #   SECRET    GHCR_DEPLOY_TOKEN PAT con scope read:packages (la VM pullea la imagen).
+#
+# Arquitectura (misma VM, nginx compartido): el edge nginx de pos_api sirve la
+# PWA en ${PWA_DOMAIN} haciendo proxy al contenedor `pwa`. Por eso el deploy de
+# la PWA NO levanta su propio stack: solo pullea la imagen nueva y recrea el
+# servicio `pwa` del compose de pos_api. (Requiere que el stack de pos_api ya
+# esté desplegado con PWA_IMAGE_NAME apuntando a esta imagen.)
 #
 # Los secrets de deploy viven en el environment "PLACEPOS" (igual que pos_api).
 # =============================================================================
@@ -95,16 +102,18 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: GHCR_USERNAME,GHCR_TOKEN,GITHUB_SHA_FOR_DEPLOY
+          envs: GHCR_USERNAME,GHCR_TOKEN
           script_stop: true
           script: |
             set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"
-            git config --global --add safe.directory "${{ secrets.DEPLOY_PATH }}"
-            git fetch --all
-            git reset --hard "$GITHUB_SHA_FOR_DEPLOY"
-            ./deploy.sh
+            # Login a GHCR para pullear la imagen privada de la PWA.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            # Pullea la imagen recién publicada y recrea SOLO el servicio pwa
+            # dentro del stack del edge (pos_api). No toca api/postgres/nginx.
+            docker compose -f docker-compose.prod.yml pull pwa
+            docker compose -f docker-compose.prod.yml up -d pwa
+            docker image prune -f >/dev/null 2>&1 || true
         env:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GHCR_DEPLOY_TOKEN }}
-          GITHUB_SHA_FOR_DEPLOY: ${{ github.sha }}

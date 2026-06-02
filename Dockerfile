@@ -1,13 +1,12 @@
 # =============================================================================
 # PlacePOS PWA - Dockerfile multi-stage (despliegue).
 #
-# Construye el SPA (SvelteKit adapter-static) y lo sirve con nginx. La imagen
-# final ES un nginx que sirve los archivos estaticos + termina TLS (Let's
-# Encrypt via certbot, montado por docker-compose.prod.yml).
+# Construye el SPA (SvelteKit adapter-static) y lo sirve con nginx en HTTP :80.
+# El TLS y el dominio los maneja el EDGE nginx de pos_api (misma VM), que hace
+# reverse-proxy a este contenedor en ${PWA_DOMAIN}. Esta imagen NO termina TLS.
 #
-# El frontend habla con pos_api DIRECTO desde el navegador (CORS), por eso el
-# nginx de la PWA NO hace reverse-proxy: solo sirve estaticos. La URL del API
-# se hornea en build-time (adapter-static) via el build-arg PUBLIC_API_URL.
+# El frontend habla con pos_api DIRECTO desde el navegador (CORS). La URL del
+# API se hornea en build-time (adapter-static) via el build-arg PUBLIC_API_URL.
 # =============================================================================
 
 # ---------- Stage 1: dependencias ----------
@@ -50,12 +49,12 @@ RUN apk add --no-cache wget
 # SPA estatico al docroot de nginx.
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Template del vhost: la imagen oficial de nginx corre envsubst sobre
-# /etc/nginx/templates/*.template al arrancar (solo las vars listadas en
-# NGINX_ENVSUBST_TEMPLATE_VARS) y escribe el resultado en /etc/nginx/conf.d/.
-COPY nginx/conf.d/default.conf.template /etc/nginx/templates/default.conf.template
+# Config interna: sirve estaticos en :80 (sin TLS). El edge nginx de pos_api
+# termina TLS y hace reverse-proxy a este contenedor. Reemplaza el default.conf
+# de la imagen oficial.
+COPY nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80 443
+EXPOSE 80
 
 # Healthcheck: el endpoint plano /nginx-health del vhost (no requiere TLS).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
