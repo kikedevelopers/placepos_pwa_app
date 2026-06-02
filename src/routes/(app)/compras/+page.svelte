@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { ShoppingBag } from '@lucide/svelte'
-    import ComingSoon from '$lib/components/ComingSoon.svelte'
+    import Purchases from '$lib/modules/Purchases/pages/Purchases/Purchases.svelte'
 </script>
 
-<ComingSoon icon={ShoppingBag} title="Compras" description="Módulo en migración desde pos_app." />
+<Purchases />
