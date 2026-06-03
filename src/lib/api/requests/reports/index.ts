@@ -31,8 +31,11 @@ export type CreditsReportParams = {
     dateFrom?: string
     dateTo?: string
     search?: string
-    status?: CreditStatus
+    status?: CreditStatusFilter
 }
+
+/** Filtro de estado del reporte de créditos (incluye OWED/OVERDUE de placepos). */
+export type CreditStatusFilter = 'ALL' | 'OWED' | 'OVERDUE' | CreditStatus
 
 export const getCreditsReport = async (
     params: CreditsReportParams = {}
@@ -51,3 +54,6 @@ export const getDailyClosure = async (date?: string): Promise<DailyClosure> => {
 }
 
 export * from './types'
+export * from './comparative'
+export * from './extendedSummary'
+export * from './customersRfm'

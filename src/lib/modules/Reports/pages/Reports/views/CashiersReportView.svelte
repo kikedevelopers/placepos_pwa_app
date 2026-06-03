@@ -1,19 +1,29 @@
 <script lang="ts">
-    import { Banknote, PiggyBank, TrendingUp, Users } from '@lucide/svelte'
+    import { Banknote, CalendarDays, PiggyBank, TrendingUp, Users } from '@lucide/svelte'
     import { formatCurrency } from '$lib/utils/numbers'
     import { getErrorMessage } from '$lib/utils/errors'
-    import { todayISO } from '$lib/utils/dates'
+    import { formatShortDate, todayISO } from '$lib/utils/dates'
+    import BottomSheet from '$lib/components/BottomSheet.svelte'
     import { useTodayByCashier } from '../hooks/useTodayByCashier'
+    import ToolbarButton from '../components/ToolbarButton.svelte'
     import ReportStatCard from '../components/ReportStatCard.svelte'
     import ReportState from '../components/ReportState.svelte'
     import CashierCard from '../components/CashierCard.svelte'
 
-    const query = useTodayByCashier(todayISO())
+    let date = $state(todayISO())
+    let dateOpen = $state(false)
+
+    const query = useTodayByCashier(() => date)
     const data = $derived($query.data)
     const totals = $derived(data?.totals)
+    const dateLabel = $derived(date === todayISO() ? 'Hoy' : formatShortDate(date))
 </script>
 
 <div class="flex flex-col gap-4 px-5 pb-8 pt-3">
+    <div class="flex items-center gap-2">
+        <ToolbarButton icon={CalendarDays} label={dateLabel} active onclick={() => (dateOpen = true)} />
+    </div>
+
     {#if data && totals}
         <div class="flex flex-col gap-3">
             <div class="flex gap-3">
@@ -67,3 +77,19 @@
         </div>
     {/if}
 </div>
+
+<BottomSheet open={dateOpen} title="Fecha" onClose={() => (dateOpen = false)}>
+    <div class="pb-1">
+        <input
+            type="date"
+            value={date}
+            max={todayISO()}
+            onchange={(e) => {
+                date = e.currentTarget.value || todayISO()
+                dateOpen = false
+            }}
+            class="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none"
+            aria-label="Fecha del resumen"
+        />
+    </div>
+</BottomSheet>

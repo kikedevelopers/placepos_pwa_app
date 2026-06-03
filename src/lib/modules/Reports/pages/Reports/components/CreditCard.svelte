@@ -21,6 +21,24 @@
 
     const status = $derived(STATUS[credit.status])
     const number = $derived(credit.saleNumber ?? credit.ticketNumber)
+
+    // Chip de vencimiento (paridad placepos): solo para créditos con saldo.
+    // Vencida (rojo) / vence hoy (ámbar) / días restantes (azul).
+    const due = $derived.by((): { label: string; tone: BadgeTone } | null => {
+        if (credit.status === 'PAID' || credit.balance <= 0 || !credit.dueDate) return null
+        const ONE_DAY = 86_400_000
+        const start = (iso: string) => {
+            const d = new Date(iso)
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+        }
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+        const days = Math.round((start(credit.dueDate) - today) / ONE_DAY)
+        const plural = (n: number) => (Math.abs(n) === 1 ? '' : 's')
+        if (days < 0) return { label: `Vencida hace ${Math.abs(days)} día${plural(days)}`, tone: 'destructive' }
+        if (days === 0) return { label: 'Vence hoy', tone: 'warning' }
+        return { label: `Faltan ${days} día${plural(days)}`, tone: 'primary' }
+    })
 </script>
 
 <!-- `credit.id` es el sale_invoice_id, así que abre el mismo detalle que ventas. -->
@@ -43,7 +61,12 @@
             </div>
         </div>
 
-        <p class="truncate text-sm text-foreground">{credit.customerName}</p>
+        <div class="flex items-center justify-between gap-2">
+            <p class="truncate text-sm text-foreground">{credit.customerName}</p>
+            {#if due}
+                <span class="shrink-0"><Badge label={due.label} tone={due.tone} /></span>
+            {/if}
+        </div>
         <p class="mt-0.5 truncate text-[11px] text-muted-foreground">
             {credit.createdBy ? `por ${credit.createdBy} · ` : ''}
             {formatShortDate(credit.createdAt)}
