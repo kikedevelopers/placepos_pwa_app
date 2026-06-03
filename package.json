@@ -19,6 +19,7 @@
     "big.js": "^7.0.1",
     "clsx": "^2.1.1",
     "html-to-image": "^1.11.13",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.6.0",
     "tailwind-variants": "^0.3.1",
     "zod": "^3.24.1"
