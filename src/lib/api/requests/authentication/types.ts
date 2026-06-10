@@ -32,6 +32,8 @@ export type CompanyProfile = {
     phone_number: string | null
     created_at: string
     updated_at: string
+    // Multi-sucursal: activa (seleccionable) vs suspendida.
+    is_active: boolean
 }
 
 export type UserProfile = {
@@ -41,6 +43,9 @@ export type UserProfile = {
     email: string
     type: string
     created_at: string
+    // Multi-sucursal — gating administrativo.
+    branches_enabled: boolean
+    branches_allowed: number
 }
 
 export type ProfileResponse = {

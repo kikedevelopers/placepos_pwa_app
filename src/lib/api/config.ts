@@ -2,6 +2,7 @@ import axios, { type AxiosInstance } from 'axios'
 import { env } from '$lib/constants/env'
 import { getAuthToken } from '$lib/api/storage'
 import { handleSessionExpired } from '$lib/api/session'
+import { subscriptionBlock } from '$lib/stores/subscriptionBlock.svelte'
 
 let _api: AxiosInstance | null = null
 
@@ -56,6 +57,12 @@ export const getApiInstance = (): AxiosInstance => {
                 // sesión (token + estado + caché) para que AuthGate redirija a
                 // login. Sin esto quedaría una "sesión zombie" en /(app).
                 await handleSessionExpired()
+            }
+
+            // 402 (cloud): la suscripción venció. Marca el estado global para
+            // que el modal bloqueante tape la app; el usuario cierra sesión él.
+            if (status === 402) {
+                subscriptionBlock.markExpired()
             }
 
             return Promise.reject({ status, ...payload })

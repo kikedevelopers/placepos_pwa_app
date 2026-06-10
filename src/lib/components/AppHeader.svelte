@@ -3,6 +3,7 @@
     import { useProfile } from '$lib/hooks/useProfile'
     import { auth } from '$lib/stores/auth.svelte'
     import SettingsSheet from '$lib/components/SettingsSheet.svelte'
+    import BranchSwitcher from '$lib/components/BranchSwitcher.svelte'
 
     const ROLE_LABELS: Record<string, string> = {
         superadmin: 'Administrador',
@@ -40,6 +41,7 @@
     )
     const company = $derived($profileQuery.data?.payload?.company_profile?.primary?.name ?? '')
     const type = $derived(profile?.type ?? storeUser?.type ?? '')
+    const branchesEnabled = $derived(profile?.branches_enabled ?? false)
 </script>
 
 <header
@@ -58,7 +60,9 @@
             <p class="text-xs text-muted-foreground">{greeting()},</p>
             <p class="truncate text-base font-bold tracking-tight text-foreground">{name}</p>
             <div class="mt-0.5 flex items-center gap-1.5">
-                {#if company}
+                {#if (type === 'owner' || type === 'superadmin') && branchesEnabled}
+                    <BranchSwitcher />
+                {:else if company}
                     <Building2 size={11} color="hsl(215, 16%, 47%)" strokeWidth={2} />
                     <span class="truncate text-[11px] text-muted-foreground">{company}</span>
                 {/if}

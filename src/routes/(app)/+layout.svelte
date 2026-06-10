@@ -2,6 +2,8 @@
     import type { Snippet } from 'svelte'
     import AppHeader from '$lib/components/AppHeader.svelte'
     import AppTabBar from '$lib/components/AppTabBar.svelte'
+    import BranchGuardGate from '$lib/components/BranchGuardGate.svelte'
+    import SubscriptionExpiredModal from '$lib/components/SubscriptionExpiredModal.svelte'
     import { TicketViewerHost } from '$lib/components/TicketViewer'
 
     let { children }: { children: Snippet } = $props()
@@ -21,4 +23,9 @@
     </main>
     <AppTabBar />
     <TicketViewerHost />
+    <!-- Multi-sucursal: auto-switch al principal y modal bloqueante de
+         reconciliación cuando el admin cambia el gating. -->
+    <BranchGuardGate />
+    <!-- Bloqueo total por suscripción vencida (cloud, ante 402). -->
+    <SubscriptionExpiredModal />
 </div>
