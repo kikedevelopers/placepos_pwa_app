@@ -8,7 +8,7 @@
     import { cubicOut } from 'svelte/easing'
     import { browser } from '$app/environment'
     import { goto } from '$app/navigation'
-    import { createMutation, useQueryClient } from '@tanstack/svelte-query'
+    import { createMutation } from '@tanstack/svelte-query'
     import {
         createSale,
         type CreateSalePayload,
@@ -16,6 +16,7 @@
     } from '$lib/api/requests/pos'
     import ScreenState from '$lib/components/ScreenState.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
+    import { TicketViewerHost } from '$lib/components/TicketViewer'
     import { useResponsive } from '$lib/hooks/useResponsive.svelte'
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import { getErrorMessage } from '$lib/utils/errors'
@@ -35,7 +36,8 @@
     import ProductConfigurator from './components/ProductConfigurator.svelte'
     import CartSheet from './components/CartSheet.svelte'
     import PostActionDialog from './components/PostActionDialog.svelte'
-    import PaymentModal from './components/PaymentModal.svelte'
+    import ChargeHost from '$lib/components/ChargeHost.svelte'
+    import { chargeOrder } from '$lib/stores/chargeOrder.svelte'
     import BarcodeScannerModal from './components/BarcodeScannerModal.svelte'
     import DailyTicketsModal from './components/DailyTicketsModal.svelte'
     import CashModal from './components/CashModal.svelte'
@@ -85,7 +87,6 @@
         }
     }
 
-    const queryClient = useQueryClient()
     const responsive = useResponsive()
     const cols = $derived(responsive.isTablet ? 4 : 2)
 
@@ -116,7 +117,6 @@
     let ticketsOpen = $state(false)
     let cashOpen = $state(false)
     let postOrder = $state<ChargeOrder | null>(null)
-    let payOrder = $state<ChargeOrder | null>(null)
     let registerError = $state('')
 
     // Llave de idempotencia ESTABLE del intento de registro actual. Se genera una
@@ -212,14 +212,6 @@
                 registerError = getErrorMessage(e) ?? 'No se pudo registrar el pedido.'
             }
         })
-    }
-
-    // Tras cobrar (incl. DUPLICATE_OPERATION), invalida las 3 keys (verbatim pos_app).
-    const onPaid = () => {
-        queryClient.invalidateQueries({ queryKey: ['pos', 'items'] })
-        queryClient.invalidateQueries({ queryKey: ['sales', 'today'] })
-        queryClient.invalidateQueries({ queryKey: ['pos', 'cash-summary'] })
-        payOrder = null
     }
 </script>
 
@@ -406,18 +398,10 @@
         visible={!!postOrder}
         ticketNumber={postOrder?.ticket_number ?? ''}
         onCharge={() => {
-            payOrder = postOrder
+            if (postOrder) chargeOrder.open(postOrder)
             postOrder = null
         }}
         onClose={() => (postOrder = null)}
-    />
-
-    <!-- Fase 2: processPayment (POST /payments) convierte el ORDER en SALE. -->
-    <PaymentModal
-        visible={!!payOrder}
-        order={payOrder}
-        onClose={() => (payOrder = null)}
-        onPaid={onPaid}
     />
 
     <BarcodeScannerModal
@@ -427,4 +411,10 @@
     />
     <DailyTicketsModal visible={ticketsOpen} onClose={() => (ticketsOpen = false)} />
     <CashModal visible={cashOpen} onClose={() => (cashOpen = false)} />
+
+    <!-- Visor de ticket compartido (idéntico al de Reportes): se abre con
+         ticketViewer.open(id) desde la lista de tickets del día. -->
+    <TicketViewerHost />
+    <!-- Host global de cobro (Fase 2 y cobro de pedidos desde el ticket). -->
+    <ChargeHost />
 </div>

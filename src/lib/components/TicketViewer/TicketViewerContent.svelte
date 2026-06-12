@@ -1,12 +1,14 @@
 <script lang="ts">
-    import { Share2, X } from '@lucide/svelte'
+    import { CreditCard, HandCoins, Share2, X } from '@lucide/svelte'
     import { getErrorMessage } from '$lib/utils/errors'
     import { useProfile } from '$lib/hooks/useProfile'
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
+    import { chargeOrder } from '$lib/stores/chargeOrder.svelte'
     import FadeInUp from '$lib/components/FadeInUp.svelte'
     import PrimaryButton from '$lib/components/PrimaryButton.svelte'
     import ScreenState from '$lib/components/ScreenState.svelte'
     import { useSaleDetail } from './useSaleDetail'
+    import AbonoSheet from './components/AbonoSheet.svelte'
     import { useShareTicket } from './share/useShareTicket.svelte'
     import TicketHero from './components/TicketHero.svelte'
     import TicketReceipt from './components/TicketReceipt.svelte'
@@ -40,8 +42,24 @@
     const heroTranslate = $derived(-Math.min(scrollY, heroH) * 0.4)
 
     let shareOpen = $state(false)
+    let abonoOpen = $state(false)
     let receiptNode = $state<HTMLElement>()
     const { exporting, shareAsImage, shareAsPdf } = useShareTicket()
+
+    // Acciones del ticket (paridad placepos): un ORDER se puede COBRAR; una venta
+    // con crédito pendiente admite un ABONO.
+    const isOrder = $derived(sale?.ticketType === 'ORDER')
+    const creditBalance = $derived(sale?.credit && sale.credit.balance > 0 ? sale.credit.balance : 0)
+
+    const handleCharge = () => {
+        if (!sale) return
+        chargeOrder.open({
+            invoice_id: sale.id,
+            total: sale.total,
+            ticket_number: sale.ticketNumber,
+            customer_name: sale.customerName
+        })
+    }
 
     const handleShareImage = async () => {
         await shareAsImage(receiptNode, sale!)
@@ -125,11 +143,39 @@
             </div>
         </div>
 
-        <!-- Footer compartir (sin liquid glass en web). -->
+        <!-- Footer de acciones (sin liquid glass en web). -->
         <div
             class="border-t border-border/70 bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
         >
-            <PrimaryButton label="Compartir recibo" onclick={() => (shareOpen = true)} icon={Share2} />
+            {#if isOrder}
+                <PrimaryButton label="Cobrar pedido" onclick={handleCharge} icon={CreditCard} />
+                <button
+                    type="button"
+                    onclick={() => (shareOpen = true)}
+                    class="mt-2 w-full py-2 text-sm font-semibold text-muted-foreground transition-opacity active:opacity-70"
+                >
+                    Compartir recibo
+                </button>
+            {:else if creditBalance > 0}
+                <PrimaryButton
+                    label="Hacer un abono"
+                    onclick={() => (abonoOpen = true)}
+                    icon={HandCoins}
+                />
+                <button
+                    type="button"
+                    onclick={() => (shareOpen = true)}
+                    class="mt-2 w-full py-2 text-sm font-semibold text-muted-foreground transition-opacity active:opacity-70"
+                >
+                    Compartir recibo
+                </button>
+            {:else}
+                <PrimaryButton
+                    label="Compartir recibo"
+                    onclick={() => (shareOpen = true)}
+                    icon={Share2}
+                />
+            {/if}
         </div>
 
         <!-- Recibo fuera de pantalla para capturar como imagen (fondo blanco, ancho fijo). -->
@@ -146,5 +192,14 @@
             onImage={handleShareImage}
             onPdf={handleSharePdf}
         />
+
+        {#if sale.credit && creditBalance > 0}
+            <AbonoSheet
+                open={abonoOpen}
+                invoiceId={sale.id}
+                balance={sale.credit.balance}
+                onClose={() => (abonoOpen = false)}
+            />
+        {/if}
     </div>
 {/if}

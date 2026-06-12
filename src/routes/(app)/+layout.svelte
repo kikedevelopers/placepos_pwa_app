@@ -5,6 +5,7 @@
     import BranchGuardGate from '$lib/components/BranchGuardGate.svelte'
     import SubscriptionExpiredModal from '$lib/components/SubscriptionExpiredModal.svelte'
     import { TicketViewerHost } from '$lib/components/TicketViewer'
+    import ChargeHost from '$lib/components/ChargeHost.svelte'
 
     let { children }: { children: Snippet } = $props()
 </script>
@@ -23,6 +24,8 @@
     </main>
     <AppTabBar />
     <TicketViewerHost />
+    <!-- Host global de cobro: PaymentModal sobre el TicketViewer (Reportes). -->
+    <ChargeHost />
     <!-- Multi-sucursal: auto-switch al principal y modal bloqueante de
          reconciliación cuando el admin cambia el gating. -->
     <BranchGuardGate />

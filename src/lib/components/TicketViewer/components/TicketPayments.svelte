@@ -26,6 +26,13 @@
     const fallback = { label: 'Otro', icon: Wallet, fg: 'hsl(215, 16%, 50%)', bg: 'hsla(215, 16%, 47%, 0.12)' }
     const meta = (m: Method) => METHOD[m] ?? fallback
 
+    // Etiqueta por pago: en transferencia/consignación incluye el banco
+    // (paridad con `getPaymentMethodLabel` de placepos).
+    const paymentLabel = (p: SalePayment): string => {
+        const base = meta(p.paymentMethod).label
+        return p.paymentMethod === 'TRANSFER' && p.bankName ? `${base} · ${p.bankName}` : base
+    }
+
     const payments = $derived(sale.payments)
     const count = $derived(payments.length)
     const total = $derived(payments.reduce((sum, p) => sum + p.amountPaid, 0))
@@ -69,7 +76,7 @@
                             <m.icon size={16} color={m.fg} strokeWidth={2.2} />
                         </span>
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-medium text-foreground">{m.label}</p>
+                            <p class="truncate text-sm font-medium text-foreground">{paymentLabel(p)}</p>
                             <p class="mt-0.5 text-[11px] text-muted-foreground/80">
                                 {formatDateTime(p.createdAt)}
                             </p>

@@ -70,17 +70,28 @@ export type CreateSaleResult = {
 // ---- POST /payments (cobrar ORDER → SALE) ----
 export type PaymentMethod = 'CASH' | 'TRANSFER' | 'CREDIT'
 
-export type ProcessPaymentPayload = {
-    invoice_id: number
-    payment_method: PaymentMethod
-    amount_due: number
+/**
+ * Un tender es UN abono concreto al ticket dentro de un pago (posiblemente
+ * dividido). Refleja 1:1 lo que el backend recibe en `payments[]`. El crédito
+ * NO es un tender: el remanente a crédito va aparte (is_credit + credit_amount).
+ * (Espejo del `PaymentTender` de placepos.)
+ */
+export type PaymentTenderPayload = {
+    payment_method: 'CASH' | 'TRANSFER'
     amount_paid: number
     change_amount: number
+    bank_id: number | null
+    bank_name: string | null
+}
+
+export type ProcessPaymentPayload = {
+    invoice_id: number
+    amount_due: number
+    // Array de tenders (1..N). Crédito puro = [] + is_credit.
+    payments: PaymentTenderPayload[]
     is_credit: boolean
     credit_amount: number
     due_date: string | null
-    bank_id: number | null
-    bank_name: string | null
     client_operation_id: string
     override_margin?: boolean
     override_stock?: boolean
@@ -90,6 +101,7 @@ export type ProcessPaymentResult = {
     success: boolean
     message: string
     payment_id: number | null
+    payment_ids?: number[]
     credit_id: number | null
     sale_number: string | null
 }

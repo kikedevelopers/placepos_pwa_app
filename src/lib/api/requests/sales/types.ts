@@ -30,6 +30,7 @@ export type SalePayment = {
     amountDue: number
     amountPaid: number
     changeAmount: number
+    bankName: string | null
     createdAt: string
 }
 
