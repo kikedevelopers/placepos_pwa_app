@@ -9,6 +9,7 @@ import {
 import { useUserRole } from '$lib/hooks/useUserRole.svelte'
 import { getErrorMessage } from '$lib/utils/errors'
 import { roundTo } from '$lib/utils/numbers'
+import { randomUUID } from '$lib/utils/uuid'
 import { daysAheadISO } from '$lib/utils/dates'
 
 export type ChargeOrder = {
@@ -36,7 +37,7 @@ const confirmOverride = (message: string): boolean =>
  * `isCredit`, `canConfirm`...) son getters reactivos.
  *
  * Idempotencia (dinero real): `client_operation_id` se genera UNA vez por
- * instancia del hook (`crypto.randomUUID()`) y se reusa en cada reintento, de
+ * instancia del hook (`randomUUID()`) y se reusa en cada reintento, de
  * modo que un reintento del mismo cobro no duplica el pago. El backend responde
  * 200 con el pago existente y `code = DUPLICATE_OPERATION`, que tratamos como
  * éxito.
@@ -52,7 +53,7 @@ const confirmOverride = (message: string): boolean =>
 export function usePayment(order: ChargeOrder, banks: PosBank[], onPaid: () => void) {
     const role = useUserRole()
     const mutation = fromStore(createMutation({ mutationFn: processPayment }))
-    const opId = crypto.randomUUID()
+    const opId = randomUUID()
 
     let method = $state<PaymentMethod>('CASH')
     let amountPaid = $state<number | null>(order.total)

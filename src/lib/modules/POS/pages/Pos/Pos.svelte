@@ -20,6 +20,7 @@
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import { getErrorMessage } from '$lib/utils/errors'
     import { formatCurrency, roundTo } from '$lib/utils/numbers'
+    import { randomUUID } from '$lib/utils/uuid'
     import {
         posCart,
         type CartItem,
@@ -186,7 +187,7 @@
         if (cart.length === 0) return
         // Llave estable: se crea una vez por intento y se reusa hasta que el
         // registro tenga exito (o se reintente con el mismo carrito).
-        if (!registerOperationId) registerOperationId = crypto.randomUUID()
+        if (!registerOperationId) registerOperationId = randomUUID()
         const captured = roundTo(
             cart.reduce((a, c) => a + c.total, 0),
             2
