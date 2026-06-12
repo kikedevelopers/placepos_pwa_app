@@ -6,7 +6,7 @@
     import { getAuthToken } from '$lib/api/storage'
     import { auth } from '$lib/stores/auth.svelte'
     import { theme } from '$lib/stores/theme.svelte'
-    import Spinner from '$lib/components/Spinner.svelte'
+    import SplashScreen from '$lib/components/SplashScreen.svelte'
 
     let { children }: { children: Snippet } = $props()
 
@@ -19,12 +19,26 @@
         auth.setHydrated(true)
     })
 
-    // Redirección equivalente al AuthGate de pos_app. En SvelteKit los grupos de
-    // ruta no aparecen en la URL, así que detectamos por pathname: /login = auth.
+    // Estado de ruta vs. autenticación. En SvelteKit los grupos de ruta no
+    // aparecen en la URL, así que detectamos por pathname: /login = auth.
+    const inAuth = $derived(page.url.pathname.startsWith('/login'))
+
+    // ¿Estamos a punto de redirigir? Mientras la ruta NO coincida con el estado
+    // de auth, la decisión sigue pendiente: un usuario sin token en una ruta de
+    // la app, o uno con token parado en /login. En esa ventana NO debemos pintar
+    // `children` (pintaría el dashboard/login equivocado un frame antes del
+    // goto), por eso seguimos mostrando el splash hasta que la ruta cuadre.
+    const redirectPending = $derived(
+        auth.isHydrated && ((!auth.token && !inAuth) || (!!auth.token && inAuth))
+    )
+
+    // Solo cuando el token está hidratado y la ruta ya corresponde al estado de
+    // auth se considera resuelto qué mostrar.
+    const resolved = $derived(auth.isHydrated && !redirectPending)
+
+    // Redirección equivalente al AuthGate de pos_app.
     $effect(() => {
         if (!auth.isHydrated) return
-        const path = page.url.pathname
-        const inAuth = path.startsWith('/login')
         if (!auth.token && !inAuth) {
             goto('/login', { replaceState: true })
         } else if (auth.token && inAuth) {
@@ -33,10 +47,8 @@
     })
 </script>
 
-{#if auth.isHydrated}
+{#if resolved}
     {@render children()}
 {:else}
-    <div class="flex min-h-[100dvh] items-center justify-center bg-background">
-        <Spinner />
-    </div>
+    <SplashScreen />
 {/if}
