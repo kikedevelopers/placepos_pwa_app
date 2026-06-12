@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { Settings } from '@lucide/svelte'
-    import ComingSoon from '$lib/components/ComingSoon.svelte'
+    import Settings from '$lib/modules/Settings/pages/Settings/Settings.svelte'
 </script>
 
-<ComingSoon icon={Settings} title="Configuración" />
+<Settings />

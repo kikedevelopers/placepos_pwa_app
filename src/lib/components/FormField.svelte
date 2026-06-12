@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { Eye, EyeOff } from '@lucide/svelte'
+
     interface Props {
         value: string
         label: string
@@ -8,6 +10,9 @@
         inputmode?: 'text' | 'decimal' | 'numeric'
         autocapitalize?: 'none' | 'sentences' | 'characters'
         maxlength?: number
+        /** Enmascara el valor (type=password) con botón de mostrar/ocultar. */
+        secure?: boolean
+        autocomplete?: AutoFill
         oninput?: () => void
     }
     let {
@@ -19,6 +24,8 @@
         inputmode = 'text',
         autocapitalize = 'sentences',
         maxlength,
+        secure = false,
+        autocomplete,
         oninput
     }: Props = $props()
 
@@ -27,8 +34,10 @@
     const ERROR = 'hsl(0, 84%, 55%)'
 
     let focused = $state(false)
+    let visible = $state(false)
     const borderColor = $derived(error ? ERROR : focused ? FOCUS : BORDER)
     const fieldId = $derived(`ff-${label.toLowerCase().replace(/\s+/g, '-')}`)
+    const masked = $derived(secure && !visible)
 </script>
 
 <div>
@@ -36,7 +45,7 @@
         >{label}</label
     >
     <div
-        class="rounded-[14px] {multiline ? 'px-3.5 py-3' : 'flex h-[52px] items-center px-3.5'}"
+        class="rounded-[14px] {multiline ? 'px-3.5 py-3' : 'flex h-[52px] items-center gap-2 px-3.5'}"
         style="border:1.5px solid {borderColor};background-color:hsla(0,0%,100%,0.7)"
     >
         {#if multiline}
@@ -51,6 +60,23 @@
                 rows="3"
                 class="w-full resize-none bg-transparent text-base text-foreground outline-none placeholder:text-[hsl(215,16%,62%)]"
             ></textarea>
+        {:else if masked}
+            <!-- type fijo por input: Svelte no permite `type` dinámico con bind:value -->
+            <input
+                id={fieldId}
+                type="password"
+                bind:value
+                {placeholder}
+                {maxlength}
+                {autocomplete}
+                {oninput}
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                onfocus={() => (focused = true)}
+                onblur={() => (focused = false)}
+                class="w-full bg-transparent text-base text-foreground outline-none placeholder:text-[hsl(215,16%,62%)]"
+            />
         {:else}
             <input
                 id={fieldId}
@@ -59,6 +85,7 @@
                 {inputmode}
                 {autocapitalize}
                 {maxlength}
+                {autocomplete}
                 {oninput}
                 autocorrect="off"
                 spellcheck="false"
@@ -66,6 +93,21 @@
                 onblur={() => (focused = false)}
                 class="w-full bg-transparent text-base text-foreground outline-none placeholder:text-[hsl(215,16%,62%)]"
             />
+        {/if}
+
+        {#if secure && !multiline}
+            <button
+                type="button"
+                onclick={() => (visible = !visible)}
+                aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                class="shrink-0 text-muted-foreground active:opacity-60"
+            >
+                {#if visible}
+                    <EyeOff size={18} strokeWidth={2} />
+                {:else}
+                    <Eye size={18} strokeWidth={2} />
+                {/if}
+            </button>
         {/if}
     </div>
     {#if error}

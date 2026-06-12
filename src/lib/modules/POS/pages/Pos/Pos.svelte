@@ -1,9 +1,12 @@
 <script lang="ts">
+    import ChevronRight from '@lucide/svelte/icons/chevron-right'
     import ReceiptText from '@lucide/svelte/icons/receipt-text'
-    import ScanLine from '@lucide/svelte/icons/scan-line'
     import ShoppingCart from '@lucide/svelte/icons/shopping-cart'
     import Wallet from '@lucide/svelte/icons/wallet'
     import X from '@lucide/svelte/icons/x'
+    import { fly } from 'svelte/transition'
+    import { cubicOut } from 'svelte/easing'
+    import { browser } from '$app/environment'
     import { goto } from '$app/navigation'
     import { createMutation, useQueryClient } from '@tanstack/svelte-query'
     import {
@@ -26,6 +29,8 @@
     import type { ChargeOrder } from './hooks/usePayment.svelte'
     import type { ConfiguratorInitial } from './components/ProductConfigurator.svelte'
     import ProductCard from './components/ProductCard.svelte'
+    import ProductRow from './components/ProductRow.svelte'
+    import ViewModeToggle, { type PosViewMode } from './components/ViewModeToggle.svelte'
     import ProductConfigurator from './components/ProductConfigurator.svelte'
     import CartSheet from './components/CartSheet.svelte'
     import PostActionDialog from './components/PostActionDialog.svelte'
@@ -91,6 +96,17 @@
 
     let search = $state('')
     const debounced = useDebouncedValue(() => search, 200)
+
+    // Modo de vista de productos (cuadros 2 columnas / lista fila a fila),
+    // persistido en localStorage. Equivalente al ViewModeToggle de placepos.
+    const VIEW_KEY = 'placepos_pwa.pos_view'
+    let viewMode = $state<PosViewMode>(
+        browser && localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid'
+    )
+    const setViewMode = (m: PosViewMode) => {
+        viewMode = m
+        if (browser) localStorage.setItem(VIEW_KEY, m)
+    }
 
     // Estado de apertura de modales / flujo de 2 fases.
     let config = $state<ConfigState | null>(null)
@@ -239,11 +255,27 @@
                 >
                     <ReceiptText size={20} color="hsl(215, 16%, 40%)" strokeWidth={2} />
                 </button>
+                <button
+                    type="button"
+                    onclick={() => (cartOpen = true)}
+                    class="relative flex h-10 w-10 items-center justify-center active:opacity-60"
+                    aria-label="Carrito"
+                >
+                    <ShoppingCart size={20} color="hsl(215, 16%, 40%)" strokeWidth={2} />
+                    {#if posCart.count > 0}
+                        <span
+                            class="absolute right-0.5 top-0.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-card px-[3px] text-[10px] font-bold leading-none text-white"
+                            style="background-color: hsl(0, 84%, 55%)"
+                        >
+                            {posCart.count}
+                        </span>
+                    {/if}
+                </button>
             </div>
         </div>
     </header>
 
-    <!-- Buscador + botón escáner. -->
+    <!-- Buscador + toggle de modo de vista (cuadros / lista). -->
     <div class="flex flex-row items-center gap-2 px-5 pb-1 pt-3">
         <div class="flex-1">
             <SearchField
@@ -251,14 +283,7 @@
                 placeholder="Buscar por nombre, SKU o código"
             />
         </div>
-        <button
-            type="button"
-            onclick={() => (scanOpen = true)}
-            class="flex h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-80"
-            aria-label="Escanear código"
-        >
-            <ScanLine size={20} color="white" strokeWidth={2.2} />
-        </button>
+        <ViewModeToggle mode={viewMode} onChange={setViewMode} />
     </div>
 
     <!-- Estados / grid de productos. -->
@@ -270,43 +295,91 @@
         {:else if products.length === 0}
             <ScreenState kind="empty" message="No hay productos para mostrar." />
         {:else}
-            <div class="h-full overflow-y-auto px-5 pb-28 pt-2">
-                <div
-                    class="grid gap-3"
-                    class:grid-cols-2={cols === 2}
-                    class:grid-cols-4={cols === 4}
-                >
-                    {#each products as product (product.id)}
-                        <ProductCard
-                            {product}
-                            onPress={() => (config = { product, initial: null, editId: null })}
-                        />
-                    {/each}
-                </div>
+            <div
+                class="h-full overflow-y-auto px-5 pt-2 transition-[padding] duration-200"
+                class:pb-28={posCart.count > 0}
+                class:pb-6={posCart.count === 0}
+            >
+                {#if viewMode === 'grid'}
+                    <div
+                        class="grid gap-3"
+                        class:grid-cols-2={cols === 2}
+                        class:grid-cols-4={cols === 4}
+                    >
+                        {#each products as product (product.id)}
+                            <ProductCard
+                                {product}
+                                onPress={() => (config = { product, initial: null, editId: null })}
+                            />
+                        {/each}
+                    </div>
+                {:else}
+                    <div class="flex flex-col gap-2.5">
+                        {#each products as product (product.id)}
+                            <ProductRow
+                                {product}
+                                onPress={() => (config = { product, initial: null, editId: null })}
+                            />
+                        {/each}
+                    </div>
+                {/if}
             </div>
         {/if}
     </div>
 
-    <!-- Barra flotante "Ver carrito" (safe-area bottom). -->
-    <div
-        class="absolute bottom-0 left-0 right-0"
-        style="padding-bottom: env(safe-area-inset-bottom)"
-    >
-        <div class="px-5 pb-3">
-            <button
-                type="button"
-                onclick={() => (cartOpen = true)}
-                class="flex h-14 flex-row items-center justify-between rounded-2xl px-5 active:opacity-90"
-                style="background-color: hsl(217, 91%, 50%); box-shadow: 0 8px 14px hsla(217, 91%, 50%, 0.35)"
+    <!-- Barra de carrito acoplada al borde inferior. Solo cuando hay artículos:
+         entra/sale con un slide suave. Diseño premium: chip con badge, total
+         prominente y CTA "Ver carrito". -->
+    {#if posCart.count > 0}
+        <div
+            class="absolute inset-x-0 bottom-0 z-10"
+            transition:fly={{ y: 100, duration: 260, easing: cubicOut }}
+        >
+            <div
+                class="border-t border-border/70 bg-card/95 px-4 pt-3 backdrop-blur-xl"
+                style="padding-bottom: calc(env(safe-area-inset-bottom) + 12px); box-shadow: 0 -8px 24px hsla(222, 47%, 11%, 0.10)"
             >
-                <div class="flex flex-row items-center gap-2">
-                    <ShoppingCart size={20} color="white" strokeWidth={2.2} />
-                    <span class="font-semibold text-white">Ver carrito ({posCart.count})</span>
-                </div>
-                <span class="text-base font-bold text-white">{formatCurrency(posCart.total)}</span>
-            </button>
+                <button
+                    type="button"
+                    onclick={() => (cartOpen = true)}
+                    class="flex w-full items-center gap-3 text-left transition-transform active:scale-[0.99]"
+                >
+                    <span
+                        class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                        style="background: linear-gradient(135deg, hsl(213, 94%, 58%), hsl(217, 91%, 50%)); box-shadow: 0 6px 14px hsla(217, 91%, 50%, 0.4)"
+                    >
+                        <ShoppingCart size={22} color="white" strokeWidth={2.2} />
+                        <span
+                            class="absolute -right-1.5 -top-1.5 flex h-[20px] min-w-[20px] items-center justify-center rounded-full border-2 border-card px-1 text-[11px] font-bold leading-none text-white"
+                            style="background-color: hsl(0, 84%, 55%)"
+                        >
+                            {posCart.count}
+                        </span>
+                    </span>
+
+                    <span class="flex min-w-0 flex-1 flex-col">
+                        <span class="truncate text-[11px] font-medium text-muted-foreground">
+                            {posCart.count}
+                            {posCart.count === 1 ? 'artículo' : 'artículos'}{posCart.customer
+                                ? ` · ${posCart.customer.name}`
+                                : ''}
+                        </span>
+                        <span class="text-xl font-bold tabular-nums text-foreground">
+                            {formatCurrency(posCart.total)}
+                        </span>
+                    </span>
+
+                    <span
+                        class="flex h-11 shrink-0 items-center gap-0.5 rounded-xl pl-4 pr-3 text-sm font-bold text-white"
+                        style="background: linear-gradient(135deg, hsl(213, 94%, 58%), hsl(217, 91%, 50%)); box-shadow: 0 6px 14px hsla(217, 91%, 50%, 0.35)"
+                    >
+                        Ver carrito
+                        <ChevronRight size={18} strokeWidth={2.4} />
+                    </span>
+                </button>
+            </div>
         </div>
-    </div>
+    {/if}
 
     <!-- Configurador de producto (agregar / editar línea). -->
     <ProductConfigurator
