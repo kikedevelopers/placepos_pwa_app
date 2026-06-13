@@ -1,7 +1,6 @@
 <script lang="ts">
     import { CreditCard, Landmark } from '@lucide/svelte'
     import type { BankAccount } from '$lib/api/requests/banks'
-    import type { FinancialMovement } from '$lib/api/requests/financial-movements/types'
     import AccountSelectorButton from '$lib/modules/Finance/components/AccountSelectorButton.svelte'
     import AccountPickerSheet from '$lib/modules/Finance/components/AccountPickerSheet.svelte'
     import AccountBalanceCard from '$lib/modules/Finance/components/AccountBalanceCard.svelte'
@@ -9,20 +8,26 @@
     import MovementsList from '$lib/modules/Finance/components/MovementsList.svelte'
     import AccountTransferSheet from '$lib/modules/Finance/components/AccountTransferSheet.svelte'
     import CashAdjustmentSheet from '$lib/modules/Finance/components/CashAdjustmentSheet.svelte'
+    import { useMovementsRange } from '$lib/modules/Finance/hooks/useMovementsRange.svelte'
     import { ACCOUNT_TYPE_LABELS } from '../schemas/bank.schema'
+    import { useBankMovements } from '../hooks/useBankMovements'
     import BankEditSheet from './BankEditSheet.svelte'
 
     interface Props {
         banks: BankAccount[]
         selected: BankAccount
-        movements: FinancialMovement[]
-        isLoadingMovements: boolean
         canManage: boolean
         canAdjust: boolean
         onSelect: (id: number) => void
     }
-    let { banks, selected, movements, isLoadingMovements, canManage, canAdjust, onSelect }: Props =
-        $props()
+    let { banks, selected, canManage, canAdjust, onSelect }: Props = $props()
+
+    const range = useMovementsRange()
+    const movementsQuery = useBankMovements(
+        () => selected.id,
+        () => range.range
+    )
+    const movements = $derived($movementsQuery.data ?? [])
 
     let pickerOpen = $state(false)
     let editOpen = $state(false)
@@ -73,11 +78,7 @@
             />
         </div>
 
-        <MovementsList
-            {movements}
-            isLoading={isLoadingMovements}
-            subtitle="Historial de transacciones de esta cuenta"
-        />
+        <MovementsList {movements} isLoading={$movementsQuery.isLoading} {range} />
     </div>
 </div>
 

@@ -5,7 +5,6 @@
     import ScreenState from '$lib/components/ScreenState.svelte'
     import FadeInUp from '$lib/components/FadeInUp.svelte'
     import { useWallets } from './hooks/useWallets'
-    import { useWalletMovements } from './hooks/useWalletMovements'
     import WalletDashboard from './components/WalletDashboard.svelte'
     import WalletFormSheet from './components/WalletFormSheet.svelte'
 
@@ -17,8 +16,6 @@
 
     const wallets = $derived($query.data ?? [])
     const selected = $derived(wallets.find((w) => w.id === selectedId) ?? wallets[0] ?? null)
-
-    const movementsQuery = useWalletMovements(() => selected?.id ?? null)
 </script>
 
 <div class="flex flex-1 flex-col">
@@ -93,8 +90,6 @@
                 <WalletDashboard
                     {wallets}
                     {selected}
-                    movements={$movementsQuery.data ?? []}
-                    isLoadingMovements={$movementsQuery.isLoading}
                     canManage={role.canManage}
                     canAdjust={role.canVoid}
                     onSelect={(id) => (selectedId = id)}

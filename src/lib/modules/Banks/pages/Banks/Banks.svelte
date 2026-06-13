@@ -5,7 +5,6 @@
     import ScreenState from '$lib/components/ScreenState.svelte'
     import FadeInUp from '$lib/components/FadeInUp.svelte'
     import { useBanks } from './hooks/useBanks'
-    import { useBankMovements } from './hooks/useBankMovements'
     import BankDashboard from './components/BankDashboard.svelte'
     import BankFormSheet from './components/BankFormSheet.svelte'
 
@@ -17,8 +16,6 @@
 
     const banks = $derived($query.data ?? [])
     const selected = $derived(banks.find((b) => b.id === selectedId) ?? banks[0] ?? null)
-
-    const movementsQuery = useBankMovements(() => selected?.id ?? null)
 </script>
 
 <div class="flex flex-1 flex-col">
@@ -92,8 +89,6 @@
                 <BankDashboard
                     {banks}
                     {selected}
-                    movements={$movementsQuery.data ?? []}
-                    isLoadingMovements={$movementsQuery.isLoading}
                     canManage={role.canManage}
                     canAdjust={role.canVoid}
                     onSelect={(id) => (selectedId = id)}
