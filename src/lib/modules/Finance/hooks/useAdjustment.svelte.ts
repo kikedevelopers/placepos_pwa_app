@@ -9,9 +9,15 @@ import { BANK_KEYS, MOVEMENT_KEYS, WALLET_KEYS } from '../constants/queryKeys'
 import {
     adjustmentDefaults,
     adjustmentSchema,
-    MOVEMENT_TYPE,
-    type AdjustmentFormData
+    computeAdjustment,
+    type AdjustmentMovementType
 } from '../schemas/adjustment.schema'
+
+/** Borrador editable del formulario: el saldo puede estar vacío (null) mientras se teclea. */
+type AdjustmentDraft = {
+    target_balance: number | null
+    description: string
+}
 
 export type AdjustmentTargetKind = 'wallet' | 'bank'
 
@@ -25,7 +31,11 @@ export type AdjustmentTarget = {
 type MutateArgs = {
     kind: AdjustmentTargetKind
     id: number
-    payload: AdjustmentFormData
+    payload: {
+        movement_type: AdjustmentMovementType
+        amount: number
+        description: string
+    }
 }
 
 const buildErrors = (error: ZodError): Record<string, string> => {
@@ -38,8 +48,9 @@ const buildErrors = (error: ZodError): Record<string, string> => {
 }
 
 /**
- * Controlador de la corrección de saldo (ajuste). Despacha a wallet o bank según
- * el target, valida que un EXPENSE no exceda el saldo y, al confirmar, invalida
+ * Controlador de la corrección de saldo (ajuste). El usuario escribe el saldo
+ * final deseado y el sistema calcula el movimiento (ingreso o egreso) por la
+ * diferencia. Despacha a wallet o bank según el target y, al confirmar, invalida
  * listas y movimientos para refrescar el saldo.
  */
 export function useAdjustmentForm(target: AdjustmentTarget, onSuccess: () => void) {
@@ -61,23 +72,19 @@ export function useAdjustmentForm(target: AdjustmentTarget, onSuccess: () => voi
     })
     const m = fromStore(mutation)
 
-    const form = $state<AdjustmentFormData>(adjustmentDefaults())
+    const form = $state<AdjustmentDraft>(adjustmentDefaults(target.balance))
     let attempted = $state(false)
     let submitError = $state('')
 
     const validation = $derived(adjustmentSchema.safeParse($state.snapshot(form)))
     const errors = $derived(attempted && !validation.success ? buildErrors(validation.error) : {})
 
-    const balanceExceeded = $derived(
-        form.movement_type === MOVEMENT_TYPE.EXPENSE &&
-            form.amount > 0 &&
-            form.amount > target.balance
-    )
+    const adjustment = $derived(computeAdjustment(target.balance, form.target_balance))
 
     const submit = () => {
         attempted = true
         submitError = ''
-        if (!validation.success || balanceExceeded) return
+        if (!validation.success || !adjustment.hasChange) return
         const data = validation.data
 
         m.current.mutate(
@@ -85,8 +92,8 @@ export function useAdjustmentForm(target: AdjustmentTarget, onSuccess: () => voi
                 kind: target.kind,
                 id: target.id,
                 payload: {
-                    movement_type: data.movement_type,
-                    amount: roundTo(data.amount, 2),
+                    movement_type: adjustment.movementType,
+                    amount: roundTo(adjustment.amount, 2),
                     description: data.description.trim()
                 }
             },
@@ -103,8 +110,8 @@ export function useAdjustmentForm(target: AdjustmentTarget, onSuccess: () => voi
         get errors() {
             return errors
         },
-        get balanceExceeded() {
-            return balanceExceeded
+        get adjustment() {
+            return adjustment
         },
         submit,
         get isSubmitting() {
