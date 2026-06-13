@@ -7,7 +7,7 @@ export const CONCEPT_LABELS: Record<string, string> = {
     SALE: 'Venta',
     CASH_REGISTER_CLOSE: 'Cierre de caja',
     TRANSFER: 'Transferencia',
-    PURCHASE: 'Compra',
+    PURCHASE: 'Abono a compra',
     PURCHASE_PAYMENT: 'Pago de compra',
     EXPENSE: 'Gasto',
     EXPENSE_PAYMENT: 'Pago de gasto',
@@ -18,6 +18,7 @@ export const CONCEPT_LABELS: Record<string, string> = {
     CREDIT_NOTE_REFUND: 'Reembolso nota crédito',
     ADJUSTMENT: 'Ajuste',
     CARRIER_PAYMENT: 'Abono a transportista',
+    CUSTOMER_ADVANCE: 'Anticipo de cliente',
     OTHER: 'Otro'
 }
 

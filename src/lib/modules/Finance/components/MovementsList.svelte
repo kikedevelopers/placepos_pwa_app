@@ -26,6 +26,20 @@
         concepts.length ? movements.filter((m) => concepts.includes(m.concept)) : movements
     )
     const conceptFiltered = $derived(concepts.length > 0)
+
+    // Total (neto) por cada concepto seleccionado, para verlos por separado.
+    const conceptTotals = $derived(
+        concepts
+            .map((concept) => {
+                const items = displayed.filter((m) => m.concept === concept)
+                const total = items.reduce(
+                    (sum, m) => sum + (isPositiveMovement(m.movement_type) ? m.amount : -m.amount),
+                    0
+                )
+                return { concept, count: items.length, total }
+            })
+            .filter((t) => t.count > 0)
+    )
 </script>
 
 <div class="overflow-hidden rounded-2xl border border-border bg-card">
@@ -102,6 +116,25 @@
             </div>
         {/if}
     </div>
+
+    {#if conceptFiltered && conceptTotals.length > 0}
+        <div class="flex flex-wrap gap-2 border-b border-border/50 bg-muted/30 px-5 py-3">
+            {#each conceptTotals as t (t.concept)}
+                <div class="rounded-xl border border-border/60 bg-card px-3.5 py-2">
+                    <p class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {conceptLabel(t.concept)} · {t.count}
+                    </p>
+                    <p
+                        class="text-sm font-bold tabular-nums {t.total >= 0
+                            ? 'text-success'
+                            : 'text-destructive'}"
+                    >
+                        {t.total >= 0 ? '+' : '-'}{formatCurrency(Math.abs(t.total))}
+                    </p>
+                </div>
+            {/each}
+        </div>
+    {/if}
 
     {#if isLoading}
         <div class="flex items-center justify-center py-12">
