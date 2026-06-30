@@ -1,13 +1,33 @@
 <script lang="ts">
     import type { Snippet } from 'svelte'
+    import { goto } from '$app/navigation'
+    import { page } from '$app/state'
     import AppHeader from '$lib/components/AppHeader.svelte'
     import AppTabBar from '$lib/components/AppTabBar.svelte'
     import BranchGuardGate from '$lib/components/BranchGuardGate.svelte'
     import SubscriptionExpiredModal from '$lib/components/SubscriptionExpiredModal.svelte'
     import { TicketViewerHost } from '$lib/components/TicketViewer'
     import ChargeHost from '$lib/components/ChargeHost.svelte'
+    import { usePermissions } from '$lib/hooks/usePermissions.svelte'
 
     let { children }: { children: Snippet } = $props()
+
+    // Landing por rol (RBAC): tras login, un empleado no-admin que cae en el
+    // dashboard por defecto (/) entra directamente al informe de Ventas. Es
+    // idempotente: `landed` lo limita a la entrada inicial (este layout queda
+    // montado entre navegaciones del grupo (app), así que no se repite). owner/
+    // superadmin quedan donde caigan por defecto.
+    const permissions = usePermissions()
+    let landed = $state(false)
+    $effect(() => {
+        if (landed) return
+        const type = permissions.userType
+        if (!type) return // perfil aún no resuelto: esperar.
+        landed = true
+        if (type === 'employee' && page.url.pathname === '/') {
+            goto('/reportes', { replaceState: true })
+        }
+    })
 </script>
 
 <!--

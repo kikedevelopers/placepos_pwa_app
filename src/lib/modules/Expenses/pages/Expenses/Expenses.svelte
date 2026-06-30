@@ -14,20 +14,34 @@
     } from './constants/tabs'
     import VariableExpenses from './components/variable/VariableExpenses.svelte'
     import FixedExpenses from './components/fixed/FixedExpenses.svelte'
+    import { usePermissions } from '$lib/hooks/usePermissions.svelte'
+
+    // Gating RBAC: la sección de gastos FIJOS sólo se muestra con
+    // `canAccessFixedExpenses` (owner ve todo). Sin permiso, sólo variables.
+    const permissions = usePermissions()
+    const canFixed = $derived(permissions.canAccessFixedExpenses)
 
     // Estado del tab sincronizado con el query param ?tab= (copia fiel de placepos
     // desktop, adaptada al router rune-based de SvelteKit). La URL es la fuente de
     // verdad: así el tab sobrevive a recargas, deep-links y back/forward.
-    const activeTab = $derived<ExpensesTab>(
+    const rawTab = $derived<ExpensesTab>(
         isExpensesTab(page.url.searchParams.get(EXPENSES_TAB_QUERY_PARAM))
             ? (page.url.searchParams.get(EXPENSES_TAB_QUERY_PARAM) as ExpensesTab)
             : DEFAULT_EXPENSES_TAB
     )
+    // Si el deep-link pide fijos pero no hay permiso, se cae a variables.
+    const activeTab = $derived<ExpensesTab>(
+        rawTab === EXPENSES_TAB_FIXED && !canFixed ? EXPENSES_TAB_VARIABLE : rawTab
+    )
 
-    const TABS: { id: ExpensesTab; label: string; icon: typeof Receipt }[] = [
-        { id: EXPENSES_TAB_VARIABLE, label: 'Variables', icon: Receipt },
-        { id: EXPENSES_TAB_FIXED, label: 'Fijos', icon: CalendarClock }
-    ]
+    const TABS = $derived<{ id: ExpensesTab; label: string; icon: typeof Receipt }[]>(
+        [
+            { id: EXPENSES_TAB_VARIABLE, label: 'Variables', icon: Receipt },
+            ...(canFixed
+                ? [{ id: EXPENSES_TAB_FIXED, label: 'Fijos', icon: CalendarClock }]
+                : [])
+        ]
+    )
 
     const selectTab = (next: ExpensesTab) => {
         if (next === activeTab || !browser) return
@@ -51,7 +65,9 @@
         </p>
     </header>
 
-    <!-- Segmented control móvil (thumb deslizante, iconos), no tabs de escritorio -->
+    <!-- Segmented control móvil (thumb deslizante, iconos), no tabs de escritorio.
+         Sólo se muestra si hay más de una sección disponible (RBAC). -->
+    {#if TABS.length > 1}
     <div class="px-5 pb-2">
         <div
             class="flex rounded-2xl bg-secondary p-1 shadow-[inset_0_1px_2px_hsla(222,47%,11%,0.04)]"
@@ -76,10 +92,11 @@
             {/each}
         </div>
     </div>
+    {/if}
 
     {#key activeTab}
         <FadeInUp index={0} class="flex flex-1 flex-col">
-            {#if activeTab === EXPENSES_TAB_FIXED}
+            {#if activeTab === EXPENSES_TAB_FIXED && canFixed}
                 <FixedExpenses />
             {:else}
                 <VariableExpenses />

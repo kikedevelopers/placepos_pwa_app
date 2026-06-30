@@ -46,6 +46,9 @@ export type UserProfile = {
     // Multi-sucursal — gating administrativo.
     branches_enabled: boolean
     branches_allowed: number
+    // RBAC: keys de permiso efectivas del usuario (pos_api las calcula).
+    // owner/superadmin tienen acceso total y no dependen de este array.
+    permissions?: string[]
 }
 
 export type ProfileResponse = {
