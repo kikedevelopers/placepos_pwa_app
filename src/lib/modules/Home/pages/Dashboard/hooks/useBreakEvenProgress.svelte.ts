@@ -26,6 +26,21 @@ const resolveTone = (progress: number): GoalTone => {
     return 'danger'
 }
 
+/**
+ * Formatea el % de avance de la meta. Antes de alcanzarla, TRUNCA (no redondea)
+ * y CAPA justo por debajo de 100 (99.9% con 1 decimal, 99% con 0) para no mostrar
+ * "100%" cuando aún falta (p.ej. 99.96% no debe leerse como meta lograda). Una vez
+ * alcanzada, muestra el % real (puede superar 100). Espejo de la convención del
+ * cliente desktop (placepos).
+ */
+export const formatGoalPercent = (pct: number, isReached: boolean, decimals = 1): string => {
+    if (isReached) return `${pct.toFixed(decimals)}%`
+    const factor = 10 ** decimals
+    const cap = 100 - 1 / factor
+    const truncated = Math.floor(Math.max(0, pct) * factor) / factor
+    return `${Math.min(cap, truncated).toFixed(decimals)}%`
+}
+
 const formatRange = (from: string, to: string): string => {
     const fmt = (iso: string, withYear: boolean) =>
         new Intl.DateTimeFormat('es-CO', {
@@ -41,7 +56,7 @@ const computeDerived = (data: BreakEvenProgress | undefined): BreakEvenDerived |
     return {
         monthRange: formatRange(data.monthFrom, data.monthTo),
         progressPct: data.monthProgress * 100,
-        progressLabel: `${(data.monthProgress * 100).toFixed(1)}%`,
+        progressLabel: formatGoalPercent(data.monthProgress * 100, data.monthProgress >= 1, 1),
         tone: resolveTone(data.monthProgress),
         isReached: data.monthProgress >= 1,
         surplus: Math.max(0, data.monthRealProfit - data.breakEvenAmount),

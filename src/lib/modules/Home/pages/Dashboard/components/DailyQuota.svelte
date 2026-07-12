@@ -1,6 +1,6 @@
 <script lang="ts">
     import { formatCurrency } from '$lib/utils/numbers'
-    import type { GoalTone } from '../hooks/useBreakEvenProgress.svelte'
+    import { formatGoalPercent, type GoalTone } from '../hooks/useBreakEvenProgress.svelte'
     import { TONE_BG, TONE_BORDER, TONE_FILL, TONE_ICON, TONE_TEXT } from './goalTones'
 
     interface Props {
@@ -48,7 +48,7 @@
             <p class="text-sm font-bold {TONE_TEXT[tone]}">
                 {isReached
                     ? `+${formatCurrency(surplus)}`
-                    : `${progressPct.toFixed(0)}% · ${formatCurrency(deficit)} restantes`}
+                    : `${formatGoalPercent(progressPct, false, 0)} · ${formatCurrency(deficit)} restantes`}
             </p>
         </div>
     </div>

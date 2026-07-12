@@ -35,7 +35,7 @@
         ></button>
 
         <div
-            class="relative mx-auto w-full max-w-[480px] rounded-t-3xl bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
+            class="relative w-full rounded-t-3xl bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
         >
             <div class="mx-auto mb-4 h-1 w-10 rounded-full bg-border"></div>
             <h3 class="mb-2 text-base font-bold text-foreground">Ajustes</h3>

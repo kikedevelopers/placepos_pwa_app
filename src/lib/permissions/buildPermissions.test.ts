@@ -69,3 +69,39 @@ describe('buildPermissions', () => {
         expect(p.canAccessSalesReport).toBe(false)
     })
 })
+
+describe('buildPermissions · visibilidad financiera (subpermisos del configurador)', () => {
+    it('owner: ve ganancia, margen, caja y ambos subpermisos siempre', () => {
+        const p = buildPermissions({ type: 'owner', permissions: [] })
+        expect(p.canViewProfit).toBe(true)
+        expect(p.canViewCash).toBe(true)
+        expect(p.canViewProductMargin).toBe(true)
+        expect(p.canViewProductProfit).toBe(true)
+    })
+
+    it('superadmin: idéntico al owner', () => {
+        const p = buildPermissions({ type: 'superadmin', permissions: [] })
+        expect(p.canViewProductMargin).toBe(true)
+        expect(p.canViewProductProfit).toBe(true)
+    })
+
+    it('empleado: cada flag manda de forma independiente', () => {
+        const p = buildPermissions({
+            type: 'employee',
+            permissions: ['canAccessPOS'],
+            can_view_product_margin: true,
+            can_view_product_profit: false
+        })
+        expect(p.isAdmin).toBe(false)
+        expect(p.canViewProductMargin).toBe(true)
+        expect(p.canViewProductProfit).toBe(false)
+    })
+
+    it('empleado sin flags en el perfil: subpermisos por defecto false', () => {
+        const p = buildPermissions({ type: 'employee', permissions: ['canAccessPOS'] })
+        expect(p.canViewProfit).toBe(false)
+        expect(p.canViewCash).toBe(false)
+        expect(p.canViewProductMargin).toBe(false)
+        expect(p.canViewProductProfit).toBe(false)
+    })
+})

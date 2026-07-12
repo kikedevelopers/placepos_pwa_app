@@ -82,9 +82,11 @@
         overscroll-behavior-y: none;
     }
 
-    /* App "tipo móvil": el contenido vive en un lienzo angosto centrado. */
+    /* App responsive (mobile-first): el shell ocupa todo el viewport. El
+       contenido interno se adapta con anchos relativos, pensado sobre todo
+       para móviles y tablets, sin confinarse a una columna angosta. */
     #app-shell {
-        @apply mx-auto w-full max-w-[480px] min-h-[100dvh] bg-background relative;
+        @apply w-full min-h-[100dvh] bg-background relative;
     }
 }
 

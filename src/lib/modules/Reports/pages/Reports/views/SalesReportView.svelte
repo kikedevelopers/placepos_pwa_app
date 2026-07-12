@@ -11,6 +11,7 @@
     } from '@lucide/svelte'
     import { formatCurrency } from '$lib/utils/numbers'
     import { getErrorMessage } from '$lib/utils/errors'
+    import { usePermissions } from '$lib/hooks/usePermissions.svelte'
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
     import FilterChips from '$lib/components/FilterChips.svelte'
@@ -48,6 +49,11 @@
         { id: 'DEBIT_NOTES', label: 'Notas débito' },
         { id: 'VOIDED_ONLY', label: 'Eliminados' }
     ] as const
+
+    // Ganancia/margen (KPI y por fila) solo si el usuario puede ver ganancias.
+    // Paridad placepos: owner/superadmin siempre; empleado según can_view_profit.
+    const permissions = usePermissions()
+    const canViewProfit = $derived(permissions.canViewProfit)
 
     let range = $state<DateRangeValue>(makeRange('today'))
     let searchInput = $state('')
@@ -116,13 +122,15 @@
                     value={String(summary.total_orders_count)}
                     description="Sin cobrar"
                 />
-                <ReportStatCard
-                    icon={TrendingUp}
-                    tint="violet"
-                    label="Ganancia"
-                    value={formatCurrency(summary.total_profit)}
-                    description={`Margen: ${summary.average_margin.toFixed(1)}%`}
-                />
+                {#if canViewProfit}
+                    <ReportStatCard
+                        icon={TrendingUp}
+                        tint="violet"
+                        label="Ganancia"
+                        value={formatCurrency(summary.total_profit)}
+                        description={`Margen: ${summary.average_margin.toFixed(1)}%`}
+                    />
+                {/if}
             </div>
         </div>
     {/if}
@@ -136,7 +144,7 @@
     {/if}
 
     {#each tickets as ticket (`${ticket.rowType}-${ticket.id}`)}
-        <SaleTicketCard {ticket} />
+        <SaleTicketCard {ticket} {canViewProfit} />
     {/each}
 </div>
 

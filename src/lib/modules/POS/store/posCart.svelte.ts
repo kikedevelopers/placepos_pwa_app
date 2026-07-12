@@ -16,13 +16,29 @@ export type CartItem = {
     note: string | null
 }
 
-export type NewCartItem = Omit<CartItem, 'id' | 'total' | 'profit' | 'margin'>
+/**
+ * Ítem nuevo para el carrito. `total`/`profit`/`margin` son opcionales: cuando
+ * el configurador los provee (modo "cálculo por monto"), el total viene PINADO
+ * al monto digitado y NO debe recalcularse desde `price × quantity` (ver
+ * `buildConfiguredLine`). Si no vienen, el store los deriva con `lineCalc`.
+ */
+export type NewCartItem = Omit<CartItem, 'id' | 'total' | 'profit' | 'margin'> &
+    Partial<Pick<CartItem, 'total' | 'profit' | 'margin'>>
 
 const lineCalc = (price: number, cost: number, quantity: number) => ({
     total: roundTo(price * quantity, 2),
     profit: roundTo((price - cost) * quantity, 2),
     margin: price > 0 ? roundTo(((price - cost) / price) * 100, 4) : 0
 })
+
+/**
+ * Usa los valores pinados por el configurador si vienen todos; si no, los
+ * deriva. Preserva el total exacto (p. ej. 2.000) del modo cálculo por monto.
+ */
+const resolveLine = (item: NewCartItem) =>
+    item.total != null && item.profit != null && item.margin != null
+        ? { total: item.total, profit: item.profit, margin: item.margin }
+        : lineCalc(item.price, item.cost, item.quantity)
 
 const sumTotal = (cart: CartItem[]): number => roundTo(cart.reduce((acc, i) => acc + i.total, 0), 2)
 
@@ -66,10 +82,7 @@ class PosCartStore {
                 return { ...c, quantity, ...lineCalc(c.price, c.cost, quantity) }
             })
         } else {
-            this.cart = [
-                ...this.cart,
-                { ...item, id: localId(), ...lineCalc(item.price, item.cost, item.quantity) }
-            ]
+            this.cart = [...this.cart, { ...item, id: localId(), ...resolveLine(item) }]
         }
         this.total = sumTotal(this.cart)
     }

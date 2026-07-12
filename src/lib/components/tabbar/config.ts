@@ -7,7 +7,10 @@ export type Tab = {
     match: string
     label: string
     icon: IconComponent
-    permission: PermissionKey
+    // Key(s) que habilitan la tab. Un array = visible si tiene CUALQUIERA
+    // (p. ej. "Reportes" con las 6 keys de informe, espejo del grupo Informes
+    // de placepos que aparece si el empleado tiene ≥1 permiso de reporte).
+    permission: PermissionKey | PermissionKey[]
 }
 
 // El POS va resaltado en el centro; los demás son pestañas normales (2 a cada lado).
@@ -19,7 +22,15 @@ export const LEFT_TABS: Tab[] = [
         match: '/reportes',
         label: 'Reportes',
         icon: BarChart3,
-        permission: 'canAccessSalesReport'
+        // Visible si tiene acceso a cualquiera de los 6 informes.
+        permission: [
+            'canAccessSalesReport',
+            'canAccessCreditsReport',
+            'canAccessComparativeReport',
+            'canAccessDailyClosureReport',
+            'canAccessCashierReport',
+            'canAccessClientsReport'
+        ]
     }
 ]
 export const RIGHT_TABS: Tab[] = [
@@ -61,8 +72,13 @@ export type VisibleTabs = {
  * ocultando las que no tengan permiso. owner/superadmin (cuyo `can` es siempre
  * true) ven todas. El POS sólo se resalta al centro si hay `canAccessPOS`.
  */
+const hasPermission = (
+    can: (key: PermissionKey) => boolean,
+    permission: PermissionKey | PermissionKey[]
+): boolean => (Array.isArray(permission) ? permission.some(can) : can(permission))
+
 export const filterTabs = (can: (key: PermissionKey) => boolean): VisibleTabs => ({
-    left: LEFT_TABS.filter((tab) => can(tab.permission)),
-    right: RIGHT_TABS.filter((tab) => can(tab.permission)),
-    showPos: can(POS_TAB.permission)
+    left: LEFT_TABS.filter((tab) => hasPermission(can, tab.permission)),
+    right: RIGHT_TABS.filter((tab) => hasPermission(can, tab.permission)),
+    showPos: hasPermission(can, POS_TAB.permission)
 })

@@ -14,7 +14,7 @@
 
         <!-- Hoja deslizable: casi toda la altura, fiel al pageSheet de iOS. -->
         <div
-            class="relative mx-auto h-[94dvh] w-full max-w-[480px] overflow-hidden rounded-t-3xl bg-background motion-safe:animate-slide-up"
+            class="relative h-[94dvh] w-full overflow-hidden rounded-t-3xl bg-background motion-safe:animate-slide-up"
         >
             <TicketViewerContent
                 ticketId={ticketViewer.ticketId}

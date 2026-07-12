@@ -1,4 +1,6 @@
 <script lang="ts">
+    import ToggleSwitch from '$lib/components/ToggleSwitch.svelte'
+
     interface Props {
         label: string
         description?: string
@@ -15,18 +17,10 @@
             <p class="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
         {/if}
     </div>
-    <button
-        type="button"
-        role="switch"
-        aria-checked={value}
-        aria-label={label}
-        onclick={() => onValueChange(!value)}
-        class="relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-out-strong"
-        style="background-color:{value ? 'hsl(217, 91%, 50%)' : 'hsl(214, 32%, 85%)'}"
-    >
-        <span
-            class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ease-out-strong"
-            style="transform:translateX({value ? '22px' : '2px'})"
-        ></span>
-    </button>
+    <!-- Switch CANÓNICO (mismo diseño que el resto de la app): la perilla se
+         ancla con `left` explícito dentro de un track h-7/w-12. Antes SwitchRow
+         tenía markup propio con `transform:translateX()` SIN `left`, cuya
+         posición base quedaba indeterminada → la perilla se desfasaba/desbordaba
+         por la derecha en el estado activo. -->
+    <ToggleSwitch variant="bare" checked={value} onChange={onValueChange} ariaLabel={label} />
 </div>

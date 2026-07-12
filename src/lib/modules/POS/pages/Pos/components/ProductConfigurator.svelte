@@ -21,61 +21,185 @@
 <script lang="ts">
     import Minus from '@lucide/svelte/icons/minus'
     import Plus from '@lucide/svelte/icons/plus'
+    import Scale from '@lucide/svelte/icons/scale'
     import MoneyInput from '$lib/components/MoneyInput.svelte'
     import PrimaryButton from '$lib/components/PrimaryButton.svelte'
-    import { formatCurrency, parseDecimal, roundTo } from '$lib/utils/numbers'
+    import ToggleSwitch from '$lib/components/ToggleSwitch.svelte'
+    import { formatCurrency, formatNumber, parseDecimal } from '$lib/utils/numbers'
+    import { usePermissions } from '$lib/hooks/usePermissions.svelte'
+    import {
+        buildConfiguredLine,
+        calculateMarginFromPrices,
+        lineProfit,
+        lineTotal,
+        quantityFromAmount,
+        roundToDecimals
+    } from '$lib/modules/POS/utils/posLineMath'
     import type { NewCartItem } from '$lib/modules/POS/store/posCart.svelte'
 
     let { visible, product, initial, onClose, onConfirm }: ProductConfiguratorProps = $props()
 
-    // Estado del cuerpo. Se reinicia cada vez que cambia el producto (equivalente
-    // al `key={product.id}` que remonta el <Body/> en pos_app).
-    let mode = $state<'fixed' | 'manual'>('fixed')
-    let position = $state(0)
+    // Subpermisos del configurador (espejo de placepos desktop): Ganancia ($) y
+    // Margen (%) se gatean por separado. owner siempre; empleado según cada flag.
+    const permissions = usePermissions()
+    const canViewProductMargin = $derived(permissions.canViewProductMargin)
+    const canViewProductProfit = $derived(permissions.canViewProductProfit)
+    const canViewAnyProfitMetric = $derived(canViewProductMargin || canViewProductProfit)
+
+    // --- Estado del cuerpo. Se reinicia cuando cambia el producto (equivalente
+    // al remonte por `key={product.id}` de placepos). ---
+    let selectedPriceIndex = $state<number | null>(0)
     let manualPrice = $state<number | null>(null)
+    let isManualPriceMode = $state(false)
+    let isAutoCalcMode = $state(false)
+    // `priceValue` es el precio unitario efectivo (equivale a `form.price` de
+    // placepos): lo actualizan los handlers imperativamente.
+    let priceValue = $state(0)
     let qty = $state('1')
     let note = $state('')
 
     let lastProductId = $state<number | null>(null)
     $effect(() => {
-        if (product && product.id !== lastProductId) {
-            lastProductId = product.id
-            const hasPricesNow = product.prices.length > 0
-            mode = initial?.price_mode ?? (hasPricesNow ? 'fixed' : 'manual')
-            position = initial?.price_position ?? 0
-            manualPrice = initial?.price_mode === 'manual' ? initial.price : null
-            qty = String(initial?.quantity ?? 1)
-            note = initial?.note ?? ''
+        if (!product || product.id === lastProductId) return
+        lastProductId = product.id
+        const hasPricesNow = product.prices.length > 0
+        isAutoCalcMode = false
+        note = initial?.note ?? ''
+
+        if (initial) {
+            qty = String(initial.quantity)
+            priceValue = initial.price
+            if (initial.price_mode === 'manual') {
+                isManualPriceMode = true
+                manualPrice = initial.price
+                selectedPriceIndex = null
+            } else {
+                isManualPriceMode = false
+                manualPrice = null
+                selectedPriceIndex = initial.price_position ?? 0
+            }
+        } else {
+            qty = '1'
+            manualPrice = null
+            isManualPriceMode = !hasPricesNow
+            selectedPriceIndex = hasPricesNow ? 0 : null
+            priceValue = hasPricesNow ? (product.prices[0]?.sale_price ?? 0) : 0
         }
     })
 
-    const hasPrices = $derived(!!product && product.prices.length > 0)
-    const quantity = $derived(parseDecimal(qty))
-    const price = $derived(
-        mode === 'fixed' && hasPrices
-            ? (product?.prices[position]?.sale_price ?? 0)
-            : (manualPrice ?? 0)
-    )
-    const validQty = $derived(Number.isFinite(quantity) && quantity > 0)
-    const total = $derived(validQty ? roundTo(price * quantity, 2) : 0)
-    const canAdd = $derived(validQty && price > 0 && !!product && price >= product.cost)
+    const cost = $derived(product?.cost ?? 0)
+    const prices = $derived(product?.prices ?? [])
+    const hasPrices = $derived(prices.length > 0)
 
+    const quantity = $derived(parseDecimal(qty))
+    const qtyForCalc = $derived(Number.isFinite(quantity) ? quantity : 0)
+    const amountValue = $derived(manualPrice ?? 0)
+    const isAmountMode = $derived(isAutoCalcMode && amountValue > 0)
+
+    const calculatedProfit = $derived(lineProfit(priceValue, cost, qtyForCalc))
+    const calculatedMargin = $derived(calculateMarginFromPrices(priceValue, cost))
+    // En modo cálculo por monto el TOTAL es el monto digitado, exacto; si no,
+    // precio × cantidad. Ambos a 2 decimales.
+    const calculatedTotal = $derived(
+        isAmountMode ? roundToDecimals(amountValue, 2) : lineTotal(priceValue, qtyForCalc)
+    )
+
+    const validQty = $derived(Number.isFinite(quantity) && quantity > 0)
+    const canAdd = $derived(validQty && priceValue > 0 && priceValue >= cost)
+    const belowCost = $derived(priceValue > 0 && priceValue < cost)
+
+    // --- Handlers (fieles a useProductConfigurator de placepos) ---
+    const setQty = (value: number) => {
+        qty = String(Math.max(0, roundToDecimals(value, 4)))
+    }
     const stepQty = (delta: number) => {
-        const next = Math.max(0, roundTo((Number.isFinite(quantity) ? quantity : 0) + delta, 4))
-        qty = String(next)
+        const current = Number.isFinite(quantity) ? quantity : 0
+        setQty(delta < 0 ? Math.max(1, current - 1) : current + 1)
+    }
+
+    const handlePriceSelect = (index: number, salePrice: number) => {
+        selectedPriceIndex = index
+        priceValue = salePrice
+        if (isAutoCalcMode && amountValue > 0 && salePrice > 0) {
+            setQty(quantityFromAmount(amountValue, salePrice))
+        } else {
+            isManualPriceMode = false
+            manualPrice = null
+        }
+    }
+
+    const handleManualFocus = () => {
+        if (isAutoCalcMode) return
+        selectedPriceIndex = null
+        isManualPriceMode = true
+    }
+
+    const handleManualBlur = () => {
+        if (isAutoCalcMode) return
+        if (amountValue <= 0) {
+            isManualPriceMode = false
+            selectedPriceIndex = 0
+            priceValue = prices[0]?.sale_price ?? 0
+        }
+    }
+
+    const handleManualChange = (value: number | null) => {
+        manualPrice = value
+        const v = value ?? 0
+        if (isAutoCalcMode) {
+            const unitPrice =
+                (selectedPriceIndex !== null
+                    ? prices[selectedPriceIndex]?.sale_price
+                    : prices[0]?.sale_price) ?? 0
+            if (unitPrice > 0 && v > 0) setQty(quantityFromAmount(v, unitPrice))
+            priceValue = unitPrice
+        } else if (v > 0) {
+            isManualPriceMode = true
+            selectedPriceIndex = null
+            priceValue = v
+        }
+    }
+
+    const toggleAutoCalc = (enabled: boolean) => {
+        isAutoCalcMode = enabled
+        if (enabled) {
+            manualPrice = null
+            qty = '1'
+            if (selectedPriceIndex === null) {
+                selectedPriceIndex = 0
+                priceValue = prices[0]?.sale_price ?? 0
+            }
+        } else {
+            isManualPriceMode = false
+            manualPrice = null
+            const currentIndex = selectedPriceIndex ?? 0
+            selectedPriceIndex = currentIndex
+            priceValue = prices[currentIndex]?.sale_price ?? 0
+            qty = '1'
+        }
     }
 
     const confirm = () => {
         if (!canAdd || !product) return
+        const line = buildConfiguredLine({
+            price: priceValue,
+            cost: product.cost,
+            quantity,
+            manualPrice: amountValue,
+            isAutoCalcMode
+        })
         onConfirm({
             item_id: product.id,
             name: product.name,
             cost: product.cost,
-            quantity,
-            price,
-            price_mode: mode,
-            price_position: mode === 'fixed' && hasPrices ? position : null,
-            note: note.trim() || null
+            quantity: line.quantity,
+            price: line.price,
+            price_mode: line.isManual ? 'manual' : 'fixed',
+            price_position: line.isManual ? null : selectedPriceIndex,
+            note: note.trim() || null,
+            total: line.total,
+            profit: line.profit,
+            margin: line.margin
         })
     }
 </script>
@@ -92,67 +216,21 @@
 
         {#if product}
             <div
-                class="relative rounded-t-3xl bg-card px-5 pt-3"
+                class="relative max-h-[92dvh] overflow-y-auto rounded-t-3xl bg-card px-5 pt-3"
                 style="padding-bottom:calc(env(safe-area-inset-bottom) + 16px)"
             >
-                <div class="mb-4 h-1 w-10 self-center rounded-full bg-border" style="margin-inline:auto"></div>
+                <div
+                    class="mb-4 h-1 w-10 self-center rounded-full bg-border"
+                    style="margin-inline:auto"
+                ></div>
                 <p class="truncate text-base font-bold text-foreground">{product.name}</p>
-                <p class="mb-4 text-xs text-muted-foreground">Costo {formatCurrency(product.cost)}</p>
+                <p class="mb-4 text-xs text-muted-foreground">
+                    Stock: {formatNumber(product.stock)}
+                </p>
 
-                <p class="mb-2 text-[13px] font-semibold text-foreground/70">Precio</p>
-                <div class="mb-3 flex flex-row flex-wrap gap-2">
-                    {#each product.prices as p, i (p.id)}
-                        {@const active = mode === 'fixed' && position === i}
-                        <button
-                            type="button"
-                            class="rounded-full border px-3.5 py-2 active:opacity-80 {active
-                                ? 'border-transparent'
-                                : 'border-border'}"
-                            style="background-color:{active ? 'hsl(217, 91%, 50%)' : 'hsl(0, 0%, 100%)'}"
-                            onclick={() => {
-                                mode = 'fixed'
-                                position = i
-                            }}
-                        >
-                            <span
-                                class="text-xs font-semibold {active ? 'text-white' : 'text-foreground'}"
-                            >
-                                {product.prices.length > 1 ? `P${i + 1}: ` : ''}{formatCurrency(
-                                    p.sale_price
-                                )}
-                            </span>
-                        </button>
-                    {/each}
-                    <button
-                        type="button"
-                        class="rounded-full border border-dashed px-3.5 py-2 active:opacity-80 {mode ===
-                        'manual'
-                            ? 'border-primary'
-                            : 'border-border'}"
-                        onclick={() => (mode = 'manual')}
-                    >
-                        <span
-                            class="text-xs font-semibold {mode === 'manual'
-                                ? 'text-primary'
-                                : 'text-muted-foreground'}"
-                        >
-                            Manual
-                        </span>
-                    </button>
-                </div>
-
-                {#if mode === 'manual'}
-                    <div class="mb-3">
-                        <MoneyInput
-                            value={manualPrice}
-                            onValueChange={(v) => (manualPrice = v)}
-                            prefix="$ "
-                        />
-                    </div>
-                {/if}
-
+                <!-- Cantidad -->
                 <p class="mb-2 text-[13px] font-semibold text-foreground/70">Cantidad</p>
-                <div class="mb-3 flex flex-row items-center gap-3">
+                <div class="mb-4 flex flex-row items-center gap-3">
                     <button
                         type="button"
                         class="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary active:opacity-70"
@@ -167,7 +245,7 @@
                         <input
                             bind:value={qty}
                             inputmode="decimal"
-                            class="w-full bg-transparent text-center text-base text-foreground outline-none"
+                            class="w-full bg-transparent text-center text-base font-bold text-foreground outline-none"
                             style="caret-color:hsl(217, 91%, 50%)"
                         />
                     </div>
@@ -181,9 +259,52 @@
                     </button>
                 </div>
 
-                <div
-                    class="mb-3 flex h-11 items-center rounded-xl border border-border bg-card px-3.5"
-                >
+                <!-- Lista de Precios -->
+                <p class="mb-2 text-[13px] font-semibold text-foreground/70">Lista de Precios</p>
+                <div class="mb-4 flex flex-row gap-2 overflow-x-auto pb-1">
+                    {#each prices.slice(0, 5) as p, i (p.id)}
+                        {@const active =
+                            selectedPriceIndex === i && (isAutoCalcMode || !isManualPriceMode)}
+                        <button
+                            type="button"
+                            class="flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors active:opacity-80 {active
+                                ? 'text-white'
+                                : 'bg-secondary text-foreground/80'}"
+                            style={active ? 'background-color:hsl(158, 64%, 42%)' : ''}
+                            onclick={() => handlePriceSelect(i, p.sale_price)}
+                        >
+                            {formatCurrency(p.sale_price)}
+                        </button>
+                    {/each}
+                </div>
+
+                <!-- Precio Personalizado / Monto Total -->
+                <div class="mb-4">
+                    <MoneyInput
+                        label={isAutoCalcMode ? 'Monto Total' : 'Precio Personalizado'}
+                        value={manualPrice}
+                        onValueChange={handleManualChange}
+                        onfocus={handleManualFocus}
+                        onblur={handleManualBlur}
+                        highlight={isManualPriceMode || isAutoCalcMode}
+                        prefix="$ "
+                        placeholder={isAutoCalcMode ? 'Ingrese monto total' : 'Ingrese precio manual'}
+                    />
+                </div>
+
+                <!-- Cálculo por monto -->
+                <div class="mb-4">
+                    <ToggleSwitch
+                        checked={isAutoCalcMode}
+                        onChange={toggleAutoCalc}
+                        icon={Scale}
+                        label="Cálculo por monto"
+                        description="Cantidad automática según total ingresado"
+                    />
+                </div>
+
+                <!-- Nota -->
+                <div class="mb-4 flex h-11 items-center rounded-xl border border-border bg-card px-3.5">
                     <input
                         bind:value={note}
                         placeholder="Nota (opcional)"
@@ -192,16 +313,51 @@
                     />
                 </div>
 
-                <div class="mb-3 flex flex-row items-center justify-between">
-                    <span class="text-sm text-muted-foreground">Total</span>
-                    <span class="text-xl font-bold text-foreground">{formatCurrency(total)}</span>
+                <!-- Ganancia / Margen / Total -->
+                <div class="mb-4 rounded-xl bg-secondary/60 p-4">
+                    {#if canViewProductProfit}
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="text-sm text-muted-foreground">Ganancia:</span>
+                            <span
+                                class="text-sm font-medium {calculatedProfit >= 0
+                                    ? 'text-success'
+                                    : 'text-destructive'}"
+                            >
+                                {formatCurrency(calculatedProfit)}
+                            </span>
+                        </div>
+                    {/if}
+                    {#if canViewProductMargin}
+                        <div class="mb-2 flex items-center justify-between">
+                            <span class="text-sm text-muted-foreground">Margen:</span>
+                            <span
+                                class="text-sm font-medium {calculatedMargin >= 0
+                                    ? 'text-success'
+                                    : 'text-destructive'}"
+                            >
+                                {calculatedMargin.toFixed(2)}%
+                            </span>
+                        </div>
+                    {/if}
+                    <div
+                        class="flex items-center justify-between {canViewAnyProfitMetric
+                            ? 'border-t border-border pt-2'
+                            : ''}"
+                    >
+                        <span class="text-sm font-medium text-foreground">Total:</span>
+                        <span class="text-lg font-bold text-foreground"
+                            >{formatCurrency(calculatedTotal)}</span
+                        >
+                    </div>
                 </div>
-                {#if price > 0 && product && price < product.cost}
+
+                {#if belowCost}
                     <p class="mb-2 text-xs text-destructive">
                         El precio no puede ser menor al costo.
                     </p>
                 {/if}
 
+                <!-- Acciones -->
                 <div class="flex flex-row gap-3">
                     <button
                         type="button"

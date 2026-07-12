@@ -57,6 +57,18 @@ export const usePermissions = () => {
         },
         get canAccessSalesReport(): boolean {
             return resolved().canAccessSalesReport
+        },
+        get canViewProfit(): boolean {
+            return resolved().canViewProfit
+        },
+        get canViewCash(): boolean {
+            return resolved().canViewCash
+        },
+        get canViewProductMargin(): boolean {
+            return resolved().canViewProductMargin
+        },
+        get canViewProductProfit(): boolean {
+            return resolved().canViewProductProfit
         }
     }
 }

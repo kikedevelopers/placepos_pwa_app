@@ -8,6 +8,8 @@
         placeholder?: string
         error?: string
         onblur?: () => void
+        onfocus?: () => void
+        highlight?: boolean
     }
     let {
         value,
@@ -17,7 +19,9 @@
         precision = 2,
         placeholder = '0',
         error,
-        onblur
+        onblur,
+        onfocus,
+        highlight = false
     }: Props = $props()
 
     const BORDER = 'hsla(214, 32%, 89%, 0.9)'
@@ -39,13 +43,17 @@
         return Number.isFinite(n) ? n : null
     }
 
+    const SUCCESS = 'hsl(158, 64%, 42%)'
     const display = $derived(focused ? raw : value == null ? '' : group(value))
-    const borderColor = $derived(error ? ERROR : focused ? FOCUS : BORDER)
+    const borderColor = $derived(
+        error ? ERROR : focused ? FOCUS : highlight ? SUCCESS : BORDER
+    )
     const fieldId = $derived(label ? `money-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined)
 
     const handleFocus = () => {
         focused = true
         raw = value == null ? '' : String(value).replace('.', ',')
+        onfocus?.()
     }
     const handleInput = (e: Event) => {
         raw = (e.currentTarget as HTMLInputElement).value

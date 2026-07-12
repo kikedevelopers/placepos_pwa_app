@@ -2,7 +2,7 @@
     import { CreditCard, HandCoins, Share2, X } from '@lucide/svelte'
     import { getErrorMessage } from '$lib/utils/errors'
     import { useProfile } from '$lib/hooks/useProfile'
-    import { useUserRole } from '$lib/hooks/useUserRole.svelte'
+    import { usePermissions } from '$lib/hooks/usePermissions.svelte'
     import { chargeOrder } from '$lib/stores/chargeOrder.svelte'
     import FadeInUp from '$lib/components/FadeInUp.svelte'
     import PrimaryButton from '$lib/components/PrimaryButton.svelte'
@@ -16,6 +16,7 @@
     import TicketPayments from './components/TicketPayments.svelte'
     import TicketCreditCard from './components/TicketCreditCard.svelte'
     import TicketNoteCard from './components/TicketNoteCard.svelte'
+    import StatusTimeline from './components/StatusTimeline.svelte'
     import ShareSheet from './components/ShareSheet.svelte'
 
     interface Props {
@@ -26,14 +27,16 @@
 
     const query = useSaleDetail(() => ticketId)
     const profileQuery = useProfile()
-    const role = useUserRole()
+    const permissions = usePermissions()
 
     const sale = $derived($query.data)
     const company = $derived($profileQuery.data?.payload?.company_profile?.primary ?? null)
-    // Igual que placepos: ganancia/margen solo owner/superadmin (o cold start).
-    const canViewProfit = $derived(
-        role.role == null || role.role === 'owner' || role.role === 'superadmin'
-    )
+    // Igual que placepos: ganancia/margen para owner/superadmin SIEMPRE y para el
+    // empleado según su flag `can_view_profit` (no solo por rol admin).
+    const canViewProfit = $derived(permissions.canViewProfit)
+    // La Línea de tiempo es exclusiva del admin (owner/superadmin), igual que en
+    // placepos: ni siquiera un empleado con can_view_profit la ve.
+    const isAdmin = $derived(permissions.isAdmin)
 
     // Parallax: el hero se desvanece y "se queda atrás" al bajar; reaparece al subir.
     let scrollY = $state(0)
@@ -125,18 +128,24 @@
                     <FinancialSummary {sale} {canViewProfit} />
                 </FadeInUp>
 
-                <FadeInUp index={2}>
+                {#if isAdmin}
+                    <FadeInUp index={2}>
+                        <StatusTimeline history={sale.statusHistory} />
+                    </FadeInUp>
+                {/if}
+
+                <FadeInUp index={3}>
                     <TicketPayments {sale} />
                 </FadeInUp>
 
                 {#if sale.credit}
-                    <FadeInUp index={3}>
+                    <FadeInUp index={4}>
                         <TicketCreditCard credit={sale.credit} />
                     </FadeInUp>
                 {/if}
 
                 {#if sale.notes}
-                    <FadeInUp index={4}>
+                    <FadeInUp index={5}>
                         <TicketNoteCard note={sale.notes} />
                     </FadeInUp>
                 {/if}

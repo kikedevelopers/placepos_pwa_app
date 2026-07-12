@@ -1,8 +1,12 @@
 <script lang="ts">
     import { Plus } from '@lucide/svelte'
+    import { fromStore } from 'svelte/store'
     import FormField from '$lib/components/FormField.svelte'
     import MoneyInput from '$lib/components/MoneyInput.svelte'
+    import { formatNumber, parseDecimal } from '$lib/utils/numbers'
     import type { ProductFormData } from '../schemas/product.schema'
+    import { usePackagings } from '../hooks/useCatalogs'
+    import { toMinimalStock } from '../utils/baseStock'
     import CategoryField from './CategoryField.svelte'
     import PackagingField from './PackagingField.svelte'
     import PriceRow from './PriceRow.svelte'
@@ -11,14 +15,28 @@
     interface Props {
         form: ProductFormData
         errors: Record<string, string>
+        setPackaging: (id: number | null) => void
         addPrice: () => void
         removePrice: (index: number) => void
         canAddPrice: boolean
         canRemovePrice: boolean
     }
-    let { form, errors, addPrice, removePrice, canAddPrice, canRemovePrice }: Props = $props()
+    let { form, errors, setPackaging, addPrice, removePrice, canAddPrice, canRemovePrice }: Props =
+        $props()
 
     const pricesError = $derived(errors['prices'])
+
+    // El "Stock disponible" se digita en unidad de empaque (paquetes). Cuando el
+    // empaque agrupa (value>1) mostramos la equivalencia en unidad mínima real.
+    const packagings = fromStore(usePackagings())
+    const stockPackagingValue = $derived(
+        (packagings.current.data ?? []).find((p) => p.id === form.packaging_id)?.value ?? 1
+    )
+    const stockMinimalEquiv = $derived(
+        stockPackagingValue > 1
+            ? toMinimalStock(parseDecimal(form.stock || '0'), stockPackagingValue)
+            : null
+    )
 </script>
 
 <div class="flex flex-col gap-4">
@@ -63,7 +81,7 @@
     />
 
     <CategoryField value={form.category_id} onSelect={(id) => (form.category_id = id)} />
-    <PackagingField value={form.packaging_id} onSelect={(id) => (form.packaging_id = id)} />
+    <PackagingField value={form.packaging_id} onSelect={setPackaging} />
 
     <div class="flex gap-3">
         <div class="flex-1">
@@ -74,6 +92,11 @@
                 error={errors['stock']}
                 inputmode="decimal"
             />
+            {#if !errors['stock'] && stockMinimalEquiv !== null}
+                <p class="ml-0.5 mt-1 text-[11px] text-muted-foreground">
+                    ≈ {formatNumber(stockMinimalEquiv)} en unidad mínima
+                </p>
+            {/if}
         </div>
         <div class="flex-1">
             <MoneyInput

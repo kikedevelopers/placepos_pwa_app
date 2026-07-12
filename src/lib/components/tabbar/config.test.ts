@@ -59,4 +59,20 @@ describe('filterTabs', () => {
         expect(v.right).toEqual([])
         expect(v.showPos).toBe(false)
     })
+
+    it('Reportes visible con CUALQUIER key de informe (solo Cajeros)', () => {
+        const can = buildPermissions({
+            type: 'employee',
+            permissions: ['canAccessCashierReport']
+        }).can
+        const v = filterTabs(can)
+        expect(tabRoutes(v.left)).toEqual(['/reportes'])
+    })
+
+    it('Reportes oculto si no tiene ninguna key de informe (solo POS)', () => {
+        const can = buildPermissions({ type: 'employee', permissions: ['canAccessPOS'] }).can
+        const v = filterTabs(can)
+        expect(tabRoutes(v.left)).toEqual([])
+        expect(v.showPos).toBe(true)
+    })
 })

@@ -44,6 +44,23 @@ export type SaleCredit = {
     createdAt: string
 }
 
+// Línea de tiempo de estados de la venta/pedido (pos_api la entrega en
+// `statusHistory`, ASC por fecha). Paridad con placepos desktop.
+export type SaleStatusEventType =
+    | 'CREATED'
+    | 'COLLECTED'
+    | 'CREDIT_OPENED'
+    | 'INSTALLMENT'
+    | 'PAID'
+    | 'VOIDED'
+
+export type SaleStatusEvent = {
+    eventType: SaleStatusEventType
+    amount: number | null
+    createdBy: string | null
+    createdAt: string
+}
+
 export type SaleDetail = {
     id: number
     ticketType: TicketType
@@ -60,6 +77,9 @@ export type SaleDetail = {
     lines: SaleLine[]
     payments: SalePayment[]
     credit: SaleCredit | null
+    // Historial de estados para la Línea de tiempo (solo visible para admin).
+    // Opcional por tolerancia a respuestas legadas/caché sin el campo.
+    statusHistory?: SaleStatusEvent[]
 }
 
 export type SalesListParams = {

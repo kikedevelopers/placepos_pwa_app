@@ -42,6 +42,7 @@
             <ProductFormFields
                 form={ctrl.form}
                 errors={ctrl.errors}
+                setPackaging={ctrl.setPackaging}
                 addPrice={ctrl.addPrice}
                 removePrice={ctrl.removePrice}
                 canAddPrice={ctrl.canAddPrice}

@@ -39,6 +39,15 @@ export interface ResolvedPermissions extends Permissions {
     isAdmin: boolean
     /** Predicado genérico: `isAdmin || granted.has(key)`. */
     can: (key: PermissionKey) => boolean
+    // Visibilidad financiera. owner/superadmin siempre; empleado según su flag
+    // (default false si el perfil no lo trae). Espejo de placepos desktop.
+    canViewProfit: boolean
+    canViewCash: boolean
+    // Subpermisos de `canViewProfit`: Margen (%) y Ganancia ($) en el
+    // configurador de producto del POS. owner/superadmin siempre; empleado según
+    // cada flag. El resto de la app sigue gateado por `canViewProfit`.
+    canViewProductMargin: boolean
+    canViewProductProfit: boolean
 }
 
 /**
@@ -51,7 +60,15 @@ export interface ResolvedPermissions extends Permissions {
  * envíe las 22 keys: el flag `isAdmin` nunca depende del array.
  */
 export const buildPermissions = (
-    userProfile: Pick<UserProfile, 'type' | 'permissions'> | null
+    userProfile: Pick<
+        UserProfile,
+        | 'type'
+        | 'permissions'
+        | 'can_view_profit'
+        | 'can_view_cash'
+        | 'can_view_product_margin'
+        | 'can_view_product_profit'
+    > | null
 ): ResolvedPermissions => {
     const userType = (userProfile?.type as UserType) || null
     const isAdmin = userType === 'owner' || userType === 'superadmin'
@@ -59,10 +76,20 @@ export const buildPermissions = (
     const granted = new Set(userProfile?.permissions ?? [])
     const can = (key: PermissionKey): boolean => isAdmin || granted.has(key)
 
+    // owner/superadmin ven todo siempre; el empleado depende de cada flag.
+    const canViewProfit = isAdmin || (userProfile?.can_view_profit ?? false)
+    const canViewCash = isAdmin || (userProfile?.can_view_cash ?? false)
+    const canViewProductMargin = isAdmin || (userProfile?.can_view_product_margin ?? false)
+    const canViewProductProfit = isAdmin || (userProfile?.can_view_product_profit ?? false)
+
     return {
         userType,
         isAdmin,
         can,
+        canViewProfit,
+        canViewCash,
+        canViewProductMargin,
+        canViewProductProfit,
         canAccessDashboard: can('canAccessDashboard'),
         canAccessCustomers: can('canAccessCustomers'),
         canAccessInventory: can('canAccessInventory'),

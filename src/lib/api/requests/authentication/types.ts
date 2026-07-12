@@ -49,6 +49,13 @@ export type UserProfile = {
     // RBAC: keys de permiso efectivas del usuario (pos_api las calcula).
     // owner/superadmin tienen acceso total y no dependen de este array.
     permissions?: string[]
+    // Flags de visibilidad financiera (pos_api los envía; owner/superadmin
+    // siempre true). Gatean márgenes/ganancias y caja en el POS.
+    can_view_profit?: boolean
+    can_view_cash?: boolean
+    // Subpermisos del configurador de producto: Margen (%) y Ganancia ($).
+    can_view_product_margin?: boolean
+    can_view_product_profit?: boolean
 }
 
 export type ProfileResponse = {

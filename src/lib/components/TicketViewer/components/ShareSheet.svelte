@@ -64,7 +64,7 @@
         ></button>
 
         <div
-            class="relative mx-auto w-full max-w-[480px] rounded-t-3xl bg-background px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
+            class="relative w-full rounded-t-3xl bg-background px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
         >
             <div class="mb-4 flex justify-center">
                 <span class="h-1 w-10 rounded-full bg-border"></span>

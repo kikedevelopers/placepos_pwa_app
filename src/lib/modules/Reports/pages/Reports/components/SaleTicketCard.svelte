@@ -9,8 +9,11 @@
 
     interface Props {
         ticket: SalesReportTicket
+        // Ganancia/margen visibles solo si el usuario puede ver ganancias
+        // (owner/superadmin o empleado con can_view_profit). Paridad placepos.
+        canViewProfit?: boolean
     }
-    let { ticket }: Props = $props()
+    let { ticket, canViewProfit = true }: Props = $props()
 
     const ticketBadge = (t: SalesReportTicket): { label: string; tone: BadgeTone } => {
         if (t.rowType === 'NOTE') {
@@ -62,16 +65,20 @@
         </p>
 
         <div class="mt-3 flex items-end justify-between border-t border-border/60 pt-3">
-            <div>
-                <p class="text-[11px] text-muted-foreground">Ganancia</p>
-                <p
-                    class="text-xs font-semibold {ticket.profit >= 0
-                        ? 'text-success'
-                        : 'text-destructive'}"
-                >
-                    {formatCurrency(ticket.profit)} · {ticket.margin.toFixed(1)}%
-                </p>
-            </div>
+            {#if canViewProfit}
+                <div>
+                    <p class="text-[11px] text-muted-foreground">Ganancia</p>
+                    <p
+                        class="text-xs font-semibold {ticket.profit >= 0
+                            ? 'text-success'
+                            : 'text-destructive'}"
+                    >
+                        {formatCurrency(ticket.profit)} · {ticket.margin.toFixed(1)}%
+                    </p>
+                </div>
+            {:else}
+                <span></span>
+            {/if}
             <div class="flex items-center gap-1.5">
                 <span
                     class="text-base font-bold {ticket.isDeleted

@@ -42,7 +42,7 @@
 
 <div class="flex flex-1 flex-col">
     <div class="flex-1 overflow-y-auto p-5">
-        <div class="mx-auto flex w-full max-w-md flex-col gap-5">
+        <div class="flex w-full flex-col gap-5">
             <!-- Total -->
             <div
                 class="relative overflow-hidden rounded-3xl border border-border bg-card px-5 py-6 text-center"
@@ -172,7 +172,7 @@
 
     <!-- Footer -->
     <div class="border-t border-border/70 bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-        <div class="mx-auto w-full max-w-md">
+        <div class="w-full">
             <PrimaryButton
                 label={confirmLabel}
                 loading={p.isPending}

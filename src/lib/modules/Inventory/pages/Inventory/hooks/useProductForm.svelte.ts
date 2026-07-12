@@ -4,6 +4,8 @@ import type { Product, ProductPayload, ProductPricePayload } from '$lib/api/requ
 import { getErrorMessage } from '$lib/utils/errors'
 import { parseDecimal } from '$lib/utils/numbers'
 import { productSchema, type ProductFormData } from '../schemas/product.schema'
+import { toPackageStock, toMinimalStock, repackageStock } from '../utils/baseStock'
+import { usePackagings } from './useCatalogs'
 import { useProductMutations } from './useProductMutations'
 
 const MAX_PRICES = 4
@@ -18,7 +20,9 @@ const toDefaults = (product: Product | null): ProductFormData => ({
     packaging_id: product?.packaging_id ?? null,
     show_in_pos: product?.show_in_pos ?? true,
     is_purchasable: product?.is_purchasable ?? false,
-    stock: String(product?.stock ?? 0),
+    // El campo se DIGITA en unidad de empaque (paquetes); product.stock viene en
+    // unidad mínima. Convertimos con el packaging embebido del producto.
+    stock: String(toPackageStock(product?.stock ?? 0, product?.packaging?.value)),
     cost: product?.cost ?? 0,
     prices: product?.prices?.length
         ? product.prices.map((p) => ({
@@ -49,11 +53,36 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
     const { create, update } = useProductMutations()
     const c = fromStore(create)
     const u = fromStore(update)
+    const packagingsQuery = fromStore(usePackagings())
 
     const form = $state<ProductFormData>(toDefaults(product))
     let attempted = $state(false)
     let submitError = $state('')
     const isEdit = !!product
+
+    // packaging_value del empaque seleccionado (o 1 si no hay / no cargó aún).
+    const packagingValue = (id: number | null): number => {
+        if (!id) return 1
+        const pkg = (packagingsQuery.current.data ?? []).find((p) => p.id === id)
+        return pkg && pkg.value > 0 ? pkg.value : 1
+    }
+
+    // packaging_value vigente del stock mostrado, para preservar el stock real
+    // (unidad mínima) al cambiar el empaque en edición. Null hasta el primer
+    // cambio: ahí `form.packaging_id` aún es el empaque original.
+    let prevPackagingValue: number | null = null
+
+    // Debe usarse en lugar de asignar form.packaging_id directamente, para que el
+    // campo de stock se reagrupe sin alterar las unidades reales al editar.
+    const setPackaging = (id: number | null) => {
+        const oldValue = prevPackagingValue ?? packagingValue(form.packaging_id)
+        const newValue = packagingValue(id)
+        if (isEdit) {
+            form.stock = String(repackageStock(parseDecimal(form.stock), oldValue, newValue))
+        }
+        prevPackagingValue = newValue
+        form.packaging_id = id
+    }
 
     const validation = $derived(productSchema.safeParse($state.snapshot(form)))
     const errors = $derived(
@@ -91,7 +120,9 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
             packaging_id: data.packaging_id,
             show_in_pos: data.show_in_pos,
             is_purchasable: data.is_purchasable,
-            stock: parseDecimal(data.stock),
+            // El stock se digita en paquetes; se persiste en unidad mínima
+            // (minimal = paquetes × packaging_value), coherente con ventas/compras.
+            stock: toMinimalStock(parseDecimal(data.stock), packagingValue(data.packaging_id)),
             cost,
             prices
         }
@@ -111,6 +142,7 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
 
     return {
         form,
+        setPackaging,
         get errors() {
             return errors
         },
