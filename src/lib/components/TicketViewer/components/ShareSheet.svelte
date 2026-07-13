@@ -11,8 +11,19 @@
         onClose: () => void
         onImage: () => void
         onPdf: () => void
+        // Textos configurables (por defecto, el ticket de venta).
+        title?: string
+        subtitle?: string
     }
-    let { visible, exporting, onClose, onImage, onPdf }: Props = $props()
+    let {
+        visible,
+        exporting,
+        onClose,
+        onImage,
+        onPdf,
+        title = 'Compartir ticket',
+        subtitle = 'Elige cómo quieres compartir o guardar este ticket.'
+    }: Props = $props()
 
     const busy = $derived(exporting !== null)
 </script>
@@ -71,7 +82,7 @@
             </div>
 
             <div class="mb-1 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-foreground">Compartir ticket</h3>
+                <h3 class="text-lg font-bold text-foreground">{title}</h3>
                 <button
                     type="button"
                     aria-label="Cerrar"
@@ -82,7 +93,7 @@
                 </button>
             </div>
             <p class="mb-4 text-sm text-muted-foreground">
-                Elige cómo quieres compartir o guardar este ticket.
+                {subtitle}
             </p>
 
             <div class="flex flex-col gap-3">
