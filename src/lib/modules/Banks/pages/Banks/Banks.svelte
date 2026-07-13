@@ -85,7 +85,7 @@
                 </button>
             </div>
         {:else}
-            <FadeInUp index={0} class="mx-auto w-full max-w-4xl">
+            <FadeInUp index={0} class="w-full">
                 <BankDashboard
                     {banks}
                     {selected}
