@@ -2,10 +2,12 @@
     import { Trash2 } from '@lucide/svelte'
     import MoneyInput from '$lib/components/MoneyInput.svelte'
     import { formatCurrency, formatNumber } from '$lib/utils/numbers'
-    import type { ProductFormData } from '../schemas/product.schema'
 
+    // Tipo estructural mínimo: PriceRow solo lee/escribe `sale_price` (ganancia y
+    // margen se muestran derivados). Así se reutiliza en el form de producto y en
+    // el de presentación sin acoplar el schema.
     interface Props {
-        price: ProductFormData['prices'][number]
+        price: { sale_price: number }
         index: number
         cost: number
         canRemove: boolean

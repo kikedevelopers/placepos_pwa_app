@@ -57,6 +57,11 @@ export type ProductPayload = {
     stock: number
     cost: number
     prices: ProductPricePayload[]
+    // Presentaciones (producto hijo): `parent_id` la marca como presentación;
+    // `packaging_value` (peso variable) hace find-or-create de un empaque auto en
+    // el backend, mutuamente excluyente con `packaging_id`.
+    parent_id?: number | null
+    packaging_value?: number
 }
 
 export type ProductListParams = {

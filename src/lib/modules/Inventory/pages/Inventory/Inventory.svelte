@@ -11,6 +11,8 @@
     import { useProducts } from './hooks/useProducts'
     import ProductCard from './components/ProductCard.svelte'
     import ProductFormModal from './components/ProductFormModal.svelte'
+    import PresentationFormModal from './components/PresentationFormModal.svelte'
+    import CreateMenuSheet from './components/CreateMenuSheet.svelte'
 
     const role = useUserRole()
     let search = $state('')
@@ -18,8 +20,14 @@
 
     const query = useProducts()
 
-    let formOpen = $state(false)
-    let editing = $state<Product | null>(null)
+    // Menú del botón "+" (Crear producto | Crear presentación).
+    let menuOpen = $state(false)
+    // Form de producto BASE.
+    let productFormOpen = $state(false)
+    let editingProduct = $state<Product | null>(null)
+    // Form de PRESENTACIÓN (producto hijo).
+    let presentationFormOpen = $state(false)
+    let editingPresentation = $state<Product | null>(null)
 
     const data = $derived($query.data)
     const filtered = $derived.by(() => {
@@ -40,14 +48,28 @@
         return { count: list.length, valuation, outOfStock }
     })
 
-    const openCreate = () => {
-        editing = null
-        formOpen = true
+    const createProduct = () => {
+        menuOpen = false
+        editingProduct = null
+        productFormOpen = true
     }
+    const createPresentation = () => {
+        menuOpen = false
+        editingPresentation = null
+        presentationFormOpen = true
+    }
+    // Editar desde la tarjeta: una presentación (parent_id) abre SU formulario;
+    // un producto base abre el de producto. Espejo de placepos (openVariantEdit
+    // vs openEdit según p.parent_id).
     const openEdit = (product: Product) => {
         if (!role.canManage) return
-        editing = product
-        formOpen = true
+        if (product.parent_id) {
+            editingPresentation = product
+            presentationFormOpen = true
+        } else {
+            editingProduct = product
+            productFormOpen = true
+        }
     }
 </script>
 
@@ -63,8 +85,8 @@
             {#if role.canManage}
                 <button
                     type="button"
-                    onclick={openCreate}
-                    aria-label="Nuevo producto"
+                    onclick={() => (menuOpen = true)}
+                    aria-label="Crear"
                     class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary transition-transform active:scale-[0.97]"
                 >
                     <Plus size={22} color="white" strokeWidth={2.5} />
@@ -117,8 +139,27 @@
     {/each}
 </div>
 
-{#if formOpen}
-    {#key editing?.id ?? 'new'}
-        <ProductFormModal product={editing} onClose={() => (formOpen = false)} />
+<CreateMenuSheet
+    open={menuOpen}
+    onClose={() => (menuOpen = false)}
+    onCreateProduct={createProduct}
+    onCreatePresentation={createPresentation}
+/>
+
+{#if productFormOpen}
+    {#key editingProduct?.id ?? 'new'}
+        <ProductFormModal
+            product={editingProduct}
+            onClose={() => (productFormOpen = false)}
+        />
+    {/key}
+{/if}
+
+{#if presentationFormOpen}
+    {#key editingPresentation?.id ?? 'new'}
+        <PresentationFormModal
+            presentation={editingPresentation}
+            onClose={() => (presentationFormOpen = false)}
+        />
     {/key}
 {/if}
