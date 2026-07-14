@@ -9,6 +9,7 @@
     import ScreenState from '$lib/components/ScreenState.svelte'
     import StatTile from '$lib/components/StatTile.svelte'
     import { useProducts } from './hooks/useProducts'
+    import { computeInventoryStats } from './utils/inventoryStats'
     import ProductCard from './components/ProductCard.svelte'
     import ProductFormModal from './components/ProductFormModal.svelte'
     import PresentationFormModal from './components/PresentationFormModal.svelte'
@@ -41,12 +42,7 @@
                 (p.bar_code ?? '').toLowerCase().includes(q)
         )
     })
-    const stats = $derived.by(() => {
-        const list = data ?? []
-        const valuation = list.reduce((acc, p) => acc + p.cost * p.stock, 0)
-        const outOfStock = list.filter((p) => p.stock_display <= 0).length
-        return { count: list.length, valuation, outOfStock }
-    })
+    const stats = $derived.by(() => computeInventoryStats(data ?? []))
 
     const createProduct = () => {
         menuOpen = false
