@@ -70,12 +70,12 @@
 
     <p class="mt-3 text-xs leading-relaxed text-muted-foreground">
         {#if enabled}
-            Activo: los pedidos (tickets tipo ORDER) suman su total a los ingresos del informe de
-            Ventas y aparecen como facturación en Finanzas. La caja y el recaudo (dinero cobrado) no
-            cambian.
+            Activo: cada pedido cuenta como una venta normal en informes y dashboard — suma su total
+            a los ingresos y su ganancia real a la ganancia y el margen. Se muestra discriminado
+            como "Pedidos (facturación)". El cierre de caja físico no cambia.
         {:else}
             Inactivo: los informes solo consideran las ventas confirmadas. Los pedidos sin cobrar no
-            suman a los ingresos.
+            suman a los ingresos ni a la ganancia.
         {/if}
     </p>
 
