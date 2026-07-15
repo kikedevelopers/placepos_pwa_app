@@ -40,6 +40,13 @@ export type TodaySummary = {
     creditPaymentsTransfer: number
     creditPaymentsTotal: number
     totalCollected: number
+    /**
+     * Facturación de pedidos del día (flag `include_orders_in_reports`; 0 cuando
+     * está OFF). NO entra en `totalCollected` (un pedido sin cobrar no es dinero
+     * recibido), pero su ganancia sí está incluida en `profit`, y `surplus` ya
+     * viene calculado sobre `totalCollected + ordersTotal`.
+     */
+    ordersTotal: number
     profit: number
     surplus: number
     expenses: number

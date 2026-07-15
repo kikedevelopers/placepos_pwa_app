@@ -4,6 +4,7 @@
     import { formatCurrency } from '$lib/utils/numbers'
     import SectionBlock from './SectionBlock.svelte'
     import LineRow from './LineRow.svelte'
+    import { hasOrdersTotalOfClosure, ordersTotalOfClosure } from '../utils/ordersFacturacion'
 
     interface Props {
         dc: DailyClosure
@@ -34,6 +35,14 @@
             value={formatCurrency(dc.consignacionesVentas)}
             tone="asset"
             indent
+        />
+    {/if}
+    {#if hasOrdersTotalOfClosure(dc)}
+        <LineRow
+            label="Pedidos (facturación)"
+            value={formatCurrency(ordersTotalOfClosure(dc))}
+            tone="muted"
+            hint="Pedidos sin cobrar"
         />
     {/if}
     <div class="mt-1 border-t border-border/60">

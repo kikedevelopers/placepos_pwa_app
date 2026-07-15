@@ -41,6 +41,9 @@ export type SalesReportSummary = {
     total_cost: number
     total_profit: number
     average_margin: number
+    // `true` si el flag `include_orders_in_reports` está activo: `total_revenue`
+    // ya incluye los pedidos (ORDER). Lo calcula el backend.
+    include_orders_in_reports?: boolean
 }
 
 export type SalesReportResponse = {
@@ -111,6 +114,14 @@ export type DailyClosure = {
     }
     consignacionesVentas: number
     consignacionesDetalle: BankDetail[]
+    /**
+     * Facturación de los pedidos (ticket_type='ORDER') del día. Solo llega > 0
+     * cuando el flag `include_orders_in_reports` está activo; 0 (u omitido por
+     * backends antiguos) si está OFF. NO entra a caja: `cashSalesTotal`,
+     * `consignacionesVentas` y `finalTotal` lo excluyen. Sí está incluido en
+     * `salesProfit`/`salesMargin` y `profit`/`margin` (el backend lo suma).
+     */
+    ordersTotal?: number
     creditsBreakdown: {
         newCreditsCount: number
         newCreditsTotal: number

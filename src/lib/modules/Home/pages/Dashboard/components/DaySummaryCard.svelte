@@ -58,6 +58,14 @@
         <SummaryRow label="Recaudo de créditos" value={today.creditPaymentsTotal} tone="asset" />
         <SummaryRow label="Abonos en efectivo" value={today.creditPaymentsCash} indent />
         <SummaryRow label="Abonos en consignación" value={today.creditPaymentsTransfer} indent />
+        {#if today.ordersTotal > 0}
+            <SummaryRow
+                label="Pedidos (facturación)"
+                value={today.ordersTotal}
+                tone="asset"
+                hint="Facturado, aún sin cobrar"
+            />
+        {/if}
 
         <div
             class="mt-2 flex items-center justify-between rounded-lg px-3 py-2.5"

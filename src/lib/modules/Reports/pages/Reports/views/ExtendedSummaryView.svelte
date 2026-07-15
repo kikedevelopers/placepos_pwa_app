@@ -9,6 +9,7 @@
     import ReportState from '../components/ReportState.svelte'
     import SectionBlock from '../components/SectionBlock.svelte'
     import LineRow from '../components/LineRow.svelte'
+    import { ordersFacturacion, hasOrdersFacturacion } from '../utils/ordersFacturacion'
 
     // Default "mes a la fecha", igual que placepos.
     let range = $state<DateRangeValue>(makeRange('month'))
@@ -48,6 +49,14 @@
             <LineRow label="Efectivo" value={formatCurrency(d.ventas.efectivo)} />
             <LineRow label="Pagos electrónicos" value={formatCurrency(d.ventas.electronico)} />
             <LineRow label="Créditos" value={formatCurrency(d.ventas.credito)} tone="warning" />
+            {#if hasOrdersFacturacion(d.ventas)}
+                <LineRow
+                    label="Pedidos (facturación)"
+                    value={formatCurrency(ordersFacturacion(d.ventas))}
+                    tone="muted"
+                    hint="Pedidos sin cobrar"
+                />
+            {/if}
             <LineRow label="Total ventas" value={formatCurrency(d.ventas.total)} bold />
             <LineRow label="Ganancia" value={formatCurrency(d.ventas.ganancia)} tone="asset" />
             <LineRow label="Margen" value={`${d.ventas.margen.toFixed(1)}%`} tone="muted" />

@@ -12,6 +12,11 @@ export type StrictInventoryConfig = {
     enabled: boolean
 }
 
+/** Incluir pedidos (ORDER) en los informes de ventas/finanzas. */
+export type IncludeOrdersInReportsConfig = {
+    enabled: boolean
+}
+
 export const getPosMargins = async (): Promise<PosMarginsConfig> => {
     const response = await api.get<ApiPayload<PosMarginsConfig>>('/app-settings/pos-margins')
     return response.data.payload
@@ -37,6 +42,24 @@ export const updateStrictInventory = async (
 ): Promise<StrictInventoryConfig> => {
     const response = await api.put<ApiPayload<StrictInventoryConfig>>(
         '/app-settings/strict-inventory',
+        payload
+    )
+    return response.data.payload
+}
+
+export const getIncludeOrdersInReports = async (): Promise<IncludeOrdersInReportsConfig> => {
+    const response = await api.get<ApiPayload<IncludeOrdersInReportsConfig>>(
+        '/app-settings/include-orders-in-reports'
+    )
+    return response.data.payload
+}
+
+/** PUT gateado por `canAccessSettings` en pos_api. */
+export const updateIncludeOrdersInReports = async (
+    payload: IncludeOrdersInReportsConfig
+): Promise<IncludeOrdersInReportsConfig> => {
+    const response = await api.put<ApiPayload<IncludeOrdersInReportsConfig>>(
+        '/app-settings/include-orders-in-reports',
         payload
     )
     return response.data.payload
