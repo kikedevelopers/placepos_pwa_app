@@ -27,6 +27,11 @@
     }
 
     const badge = $derived(ticketBadge(ticket))
+    // Una venta a CRÉDITO (fila INVOICE de tipo venta) se resalta con un chip
+    // ámbar para distinguirla de un vistazo. Las notas no lo llevan.
+    const showCreditBadge = $derived(
+        ticket.rowType === 'INVOICE' && ticket.ticketType !== 'ORDER' && ticket.isCredit
+    )
     const number = $derived(
         ticket.rowType === 'NOTE' ? ticket.noteNumber : (ticket.saleNumber ?? ticket.ticketNumber)
     )
@@ -51,6 +56,9 @@
             <div class="flex items-center gap-2">
                 <Badge label={badge.label} tone={badge.tone} />
                 <span class="text-sm font-semibold text-foreground">{number ?? '—'}</span>
+                {#if showCreditBadge}
+                    <Badge label="Crédito" tone="warning" />
+                {/if}
                 {#if ticket.isDeleted}
                     <Ban size={13} color="hsl(0, 84%, 55%)" />
                 {/if}

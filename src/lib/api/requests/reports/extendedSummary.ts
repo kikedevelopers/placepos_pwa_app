@@ -14,6 +14,10 @@ export interface ExtendedSummaryResult {
         efectivo: number
         electronico: number
         credito: number
+        // Ganancia y margen DEVENGADOS de los créditos del rango (discriminados).
+        // El crédito ya está sumado en `total` y `ganancia`.
+        creditoGanancia: number
+        creditoMargen: number
         // Facturación de pedidos (ORDER) del rango. Solo > 0 cuando el flag
         // `include_orders_in_reports` está activo; ya viene incluida en `total`.
         // No afecta caja/recaudo ni la ganancia cobrada (canónica).

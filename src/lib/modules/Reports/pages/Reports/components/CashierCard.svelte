@@ -11,6 +11,10 @@
     }
     let { cashier, rank }: Props = $props()
 
+    // Ganancia y margen del método, como sub-línea del desglose.
+    const profitHint = (profit: number, margin: number): string =>
+        `Gan. ${formatCurrency(profit)} · ${margin.toFixed(1)}%`
+
     const initialsOf = (name: string): string => {
         const parts = name.trim().split(/\s+/).filter(Boolean)
         return (
@@ -54,9 +58,9 @@
     </div>
 
     <div class="mt-3 border-t border-border/60 pt-3">
-        <p class="text-[11px] text-muted-foreground">Total recaudado</p>
+        <p class="text-[11px] text-muted-foreground">Total Ventas</p>
         <p class="truncate text-xl font-bold text-foreground">
-            {formatCurrency(cashier.totalCollected)}
+            {formatCurrency(cashier.totalSales)}
         </p>
     </div>
 
@@ -87,8 +91,31 @@
 
     <div class="mt-3 border-t border-border/60 pt-2">
         <p class="mb-1 text-[11px] uppercase tracking-[1px] text-muted-foreground/70">Desglose</p>
-        <LineRow label="Efectivo" value={formatCurrency(cashier.cashSales)} tone="asset" />
-        <LineRow label="Consignación" value={formatCurrency(cashier.transferSales)} tone="info" />
+        <!-- Total Ventas del cajero = Efectivo + Consignación + Crédito (DEVENGADO,
+             el crédito es una venta más). Cada método muestra su ganancia/margen.
+             Los abonos (Recaudo de Cartera) quedan APARTE, no suman al total. -->
+        <LineRow
+            label="Efectivo"
+            value={formatCurrency(cashier.cashSales)}
+            tone="asset"
+            hint={profitHint(cashier.cashProfit, cashier.cashMargin)}
+        />
+        <LineRow
+            label="Consignación"
+            value={formatCurrency(cashier.transferSales)}
+            tone="info"
+            hint={profitHint(cashier.transferProfit, cashier.transferMargin)}
+        />
+        {#if cashier.creditSales > 0}
+            <LineRow
+                label={cashier.newCredits.count > 0
+                    ? `Crédito (${cashier.newCredits.count})`
+                    : 'Crédito'}
+                value={formatCurrency(cashier.creditSales)}
+                tone="warning"
+                hint={profitHint(cashier.creditProfit, cashier.creditMargin)}
+            />
+        {/if}
         {#if cashier.creditPaymentsCash > 0}
             <LineRow
                 label="Abonos en efectivo"
@@ -101,14 +128,6 @@
                 label="Abonos por consignación"
                 value={formatCurrency(cashier.creditPaymentsTransfer)}
                 indent
-            />
-        {/if}
-        {#if cashier.newCredits.count > 0}
-            <LineRow
-                label={`Créditos generados (${cashier.newCredits.count})`}
-                value={formatCurrency(cashier.newCredits.total)}
-                tone="warning"
-                hint="No entran al recaudo"
             />
         {/if}
     </div>

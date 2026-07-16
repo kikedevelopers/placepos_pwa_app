@@ -37,8 +37,8 @@
                 <ReportStatCard
                     icon={Banknote}
                     tint="success"
-                    label="Total recaudado"
-                    value={formatCurrency(totals.totalCollected)}
+                    label="Total Ventas"
+                    value={formatCurrency(totals.totalSales)}
                     description="Todos los cajeros"
                 />
             </div>

@@ -48,7 +48,14 @@
         <SectionBlock icon={Banknote} title="Ventas" accent="success">
             <LineRow label="Efectivo" value={formatCurrency(d.ventas.efectivo)} />
             <LineRow label="Pagos electrónicos" value={formatCurrency(d.ventas.electronico)} />
-            <LineRow label="Créditos" value={formatCurrency(d.ventas.credito)} tone="warning" />
+            <LineRow
+                label="Créditos"
+                value={formatCurrency(d.ventas.credito)}
+                tone="warning"
+                hint={d.ventas.credito > 0
+                    ? `Gan. ${formatCurrency(d.ventas.creditoGanancia)} · ${d.ventas.creditoMargen.toFixed(1)}%`
+                    : undefined}
+            />
             {#if hasOrdersFacturacion(d.ventas)}
                 <LineRow
                     label="Pedidos (facturación)"

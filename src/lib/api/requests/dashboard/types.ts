@@ -42,19 +42,30 @@ export type TodaySummary = {
     totalCollected: number
     /**
      * Facturación de pedidos del día (flag `include_orders_in_reports`; 0 cuando
-     * está OFF). NO entra en `totalCollected` (un pedido sin cobrar no es dinero
-     * recibido), pero su ganancia sí está incluida en `profit`, y `surplus` ya
-     * viene calculado sobre `totalCollected + ordersTotal`.
+     * está OFF). Con el flag ON el pedido cuenta como una venta normal: ya está
+     * sumado dentro de `totalSales` y su ganancia dentro de `salesProfit`. No
+     * entra a caja (`totalCollected`).
      */
     ordersTotal: number
-    profit: number
-    surplus: number
+    // Vista VENTAS del día (DEVENGADO): la venta a CRÉDITO cuenta como venta del
+    // día por su valor íntegro. Alimenta el "Resumen de ventas del día" y las
+    // tarjetas de Finanzas. NO tocan la caja (totalCollected/profit/surplus/
+    // realProfit siguen base caja para la Meta del mes).
+    creditSales: number // valor íntegro de los créditos generados hoy (= newCredits.total)
+    totalSales: number // cashSales + transferSales + creditSales + ordersTotal
+    salesProfit: number // ganancia DEVENGADA del día = contado + crédito + pedidos
+    salesSurplus: number // totalSales − salesProfit
+    salesRealProfit: number // salesProfit − gastos
+    profit: number // CAJA (cobrada)
+    surplus: number // CAJA
     expenses: number
-    realProfit: number
+    realProfit: number // CAJA
     salesCount: number
     newCredits: {
         count: number
         total: number
+        // Ganancia DEVENGADA de los créditos del día (discriminada).
+        profit: number
     }
     purchases: {
         count: number
@@ -63,6 +74,7 @@ export type TodaySummary = {
         paymentsTransfer: number
         paymentsTotal: number
         supplierDebt: number
+        todayCreditsBalance?: number
     }
     cashAccounts: CashAccountsBreakdown
 }
@@ -72,10 +84,24 @@ export type CashierSummary = {
     userName: string
     cashSales: number
     transferSales: number
+    // Valor DEVENGADO de los créditos generados por el cajero (venta a crédito =
+    // venta). Discriminado; suma a totalSales.
+    creditSales: number
+    // Ganancia y margen POR MÉTODO (para el desglose). La suma cashProfit +
+    // transferProfit + creditProfit = profit.
+    cashProfit: number
+    cashMargin: number
+    transferProfit: number
+    transferMargin: number
+    creditProfit: number
+    creditMargin: number
     creditPaymentsCash: number
     creditPaymentsTransfer: number
     creditPaymentsTotal: number
     totalCollected: number
+    // Total VENTAS del cajero = contado + consignación + crédito. Los abonos
+    // (creditPayments*, Recaudo de Cartera) quedan APARTE (no aquí).
+    totalSales: number
     profit: number
     margin: number
     surplus: number
@@ -92,10 +118,12 @@ export type TodayByCashier = {
     totals: {
         cashSales: number
         transferSales: number
+        creditSales: number
         creditPaymentsCash: number
         creditPaymentsTransfer: number
         creditPaymentsTotal: number
         totalCollected: number
+        totalSales: number
         profit: number
         margin: number
         surplus: number

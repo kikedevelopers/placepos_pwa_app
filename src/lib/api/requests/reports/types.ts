@@ -28,6 +28,16 @@ export type SalesReportTicket = {
     isCredit: boolean
     creditBalance: number
     creditStatus: string | null
+    // Saldo pendiente por cobrar DERIVADO de los pagos vivos de la venta. Una
+    // venta de contado a la que se le reversó un pago queda como VENTA con saldo,
+    // sin pasar a crédito. `isPending` solo es true para ventas (SALE) vivas con
+    // saldo > 0.
+    balanceDue: number
+    isPending: boolean
+    // Tipo de pago DERIVADO de los medios de los pagos vivos del ticket:
+    //   CASH → contado · TRANSFER → consignación · MIXED → varios medios ·
+    //   CREDIT → crédito · UNDEFINED → sin pagos vivos.
+    paymentType: 'CASH' | 'TRANSFER' | 'CREDIT' | 'MIXED' | 'UNDEFINED'
 }
 
 export type SalesReportSummary = {
@@ -125,6 +135,10 @@ export type DailyClosure = {
     creditsBreakdown: {
         newCreditsCount: number
         newCreditsTotal: number
+        // Ganancia y margen DEVENGADOS de los créditos del día (neto de notas).
+        // El crédito cuenta como venta del día en el bloque "Ventas del Día".
+        newCreditsProfit: number
+        newCreditsMargin: number
         abonosCash: number
         abonosConsignacion: number
         abonosConsignacionDetalle: BankDetail[]

@@ -5,12 +5,16 @@
     import SectionBlock from './SectionBlock.svelte'
     import LineRow from './LineRow.svelte'
     import { hasOrdersTotalOfClosure, ordersTotalOfClosure } from '../utils/ordersFacturacion'
+    import { dailyClosureSalesTotal } from '../utils/ventasDevengado'
 
     interface Props {
         dc: DailyClosure
     }
     let { dc }: Props = $props()
     const cb = $derived(dc.creditsBreakdown)
+    // Total Ventas del Día (DEVENGADO): efectivo + consignación + créditos del
+    // día + pedidos. El crédito cuenta como venta más.
+    const totalSalesDay = $derived(dailyClosureSalesTotal(dc))
 </script>
 
 <SectionBlock
@@ -37,6 +41,14 @@
             indent
         />
     {/if}
+    {#if cb.newCreditsTotal > 0}
+        <LineRow
+            label="Créditos del día"
+            value={formatCurrency(cb.newCreditsTotal)}
+            tone="warning"
+            hint={`Gan. ${formatCurrency(cb.newCreditsProfit)} · ${cb.newCreditsMargin.toFixed(1)}%`}
+        />
+    {/if}
     {#if hasOrdersTotalOfClosure(dc)}
         <LineRow
             label="Pedidos (facturación)"
@@ -46,11 +58,7 @@
         />
     {/if}
     <div class="mt-1 border-t border-border/60">
-        <LineRow
-            label="Total Ventas del Día"
-            value={formatCurrency(dc.cashSalesTotal + dc.consignacionesVentas)}
-            bold
-        />
+        <LineRow label="Total Ventas del Día" value={formatCurrency(totalSalesDay)} bold />
     </div>
     <LineRow
         label="Rentabilidad"

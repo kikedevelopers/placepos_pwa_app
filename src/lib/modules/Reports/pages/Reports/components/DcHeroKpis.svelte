@@ -3,6 +3,7 @@
     import type { DailyClosure } from '$lib/api/requests/reports'
     import type { TodaySummary } from '$lib/api/requests/dashboard'
     import { formatCurrency } from '$lib/utils/numbers'
+    import { heroRealProfit, heroSurplus, heroTotalSales } from '../utils/ventasDevengado'
     import ReportStatCard from './ReportStatCard.svelte'
 
     interface Props {
@@ -11,12 +12,12 @@
     }
     let { dc, today }: Props = $props()
 
-    const totalCollected = $derived(
-        today?.totalCollected ??
-            dc.cashSalesTotal + dc.consignacionesVentas + dc.creditsBreakdown.abonosTotal
-    )
-    const realProfit = $derived(today?.realProfit ?? dc.profit - dc.expensesTotal)
-    const surplus = $derived(today?.surplus ?? totalCollected - dc.profit)
+    // DEVENGADO: el crédito del día cuenta como venta. "Total Ventas del día",
+    // "Ganancia real" y "Excedente" salen de los campos sales* de /dashboard/today
+    // (fallback al cierre). La caja/Meta del mes no se muestra aquí.
+    const totalSales = $derived(heroTotalSales(dc, today))
+    const realProfit = $derived(heroRealProfit(dc, today))
+    const surplus = $derived(heroSurplus(dc, today))
 </script>
 
 <div class="flex flex-col gap-3">
@@ -24,9 +25,9 @@
         <ReportStatCard
             icon={Banknote}
             tint="primary"
-            label="Total recaudado"
-            value={formatCurrency(totalCollected)}
-            description="Ventas + cartera"
+            label="Total Ventas del día"
+            value={formatCurrency(totalSales)}
+            description="Contado + crédito del día"
         />
         <ReportStatCard
             icon={TrendingUp}

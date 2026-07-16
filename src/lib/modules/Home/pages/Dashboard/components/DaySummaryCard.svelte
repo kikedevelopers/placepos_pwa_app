@@ -1,6 +1,7 @@
 <script lang="ts">
     import { AlertTriangle, BarChart3 } from '@lucide/svelte'
     import { formatCurrency } from '$lib/utils/numbers'
+    import { creditMarginPct } from '$lib/utils/credits'
     import { getErrorMessage } from '$lib/utils/errors'
     import { useTodaySummary } from '$lib/hooks/useTodaySummary'
     import Spinner from '$lib/components/Spinner.svelte'
@@ -12,6 +13,16 @@
 
     const query = useTodaySummary()
     const today = $derived($query.data)
+
+    // Hint de la fila "Créditos del día": ganancia y margen DEVENGADOS del crédito.
+    const creditHint = $derived(
+        today
+            ? `Ganancia ${formatCurrency(today.newCredits.profit)} · ${creditMarginPct(
+                  today.newCredits.total,
+                  today.newCredits.profit
+              ).toFixed(1)}%`
+            : ''
+    )
 </script>
 
 {#if $query.isLoading}
@@ -37,9 +48,7 @@
                 </div>
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-foreground">Resumen de ventas del día</p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">
-                        Recaudo, reinversión y ganancia
-                    </p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">Ventas y ganancia del día</p>
                 </div>
             </div>
             <div
@@ -53,11 +62,20 @@
             </div>
         </div>
 
+        <!-- Bloque VENTAS del día (DEVENGADO): contado + consignaciones + CRÉDITOS
+             del día (una venta a crédito es una venta más, discriminada con su
+             ganancia) + pedidos. El "Recaudo de cartera" (abonos) es algo
+             COMPLETAMENTE APARTE: no se muestra aquí, vive en Finanzas. -->
         <SummaryRow label="Ventas en efectivo" value={today.cashSales} tone="asset" />
         <SummaryRow label="Consignaciones" value={today.transferSales} tone="asset" />
-        <SummaryRow label="Recaudo de créditos" value={today.creditPaymentsTotal} tone="asset" />
-        <SummaryRow label="Abonos en efectivo" value={today.creditPaymentsCash} indent />
-        <SummaryRow label="Abonos en consignación" value={today.creditPaymentsTransfer} indent />
+        {#if today.creditSales > 0}
+            <SummaryRow
+                label="Créditos del día"
+                value={today.creditSales}
+                tone="asset"
+                hint={creditHint}
+            />
+        {/if}
         {#if today.ordersTotal > 0}
             <SummaryRow
                 label="Pedidos (facturación)"
@@ -71,20 +89,22 @@
             class="mt-2 flex items-center justify-between rounded-lg px-3 py-2.5"
             style="background-color:hsla(217,91%,50%,0.10);border:1px solid hsla(217,91%,50%,0.30)"
         >
-            <span class="text-xs font-semibold text-foreground">Total recaudado</span>
-            <span class="text-sm font-bold text-primary">{formatCurrency(today.totalCollected)}</span
-            >
+            <span class="text-xs font-semibold text-foreground">Total Ventas del día</span>
+            <span class="text-sm font-bold text-primary">{formatCurrency(today.totalSales)}</span>
         </div>
 
         <div class="mt-5 border-t border-border/60 pt-4">
             <p class={SECTION}>Reinversión</p>
-            <SummaryRow label="Ganancia del día" value={today.profit} tone="liability" />
+            <!-- Ganancia/Excedente DEVENGADOS: incluyen la ganancia del crédito. -->
+            <SummaryRow label="Ganancia del día" value={today.salesProfit} tone="liability" />
             <div
                 class="mt-2 flex items-center justify-between border-t border-border/60 px-3 py-3"
             >
                 <span class="text-xs font-semibold text-foreground">Excedente (reinversión)</span>
-                <span class="text-sm font-bold {today.surplus >= 0 ? 'text-info' : 'text-destructive'}"
-                    >{formatCurrency(today.surplus)}</span
+                <span
+                    class="text-sm font-bold {today.salesSurplus >= 0
+                        ? 'text-info'
+                        : 'text-destructive'}">{formatCurrency(today.salesSurplus)}</span
                 >
             </div>
             <p class="mt-2 text-[10px] italic text-muted-foreground/70">
@@ -94,37 +114,18 @@
 
         <div class="mt-5 border-t border-border/60 pt-4">
             <p class={SECTION}>Ganancia real</p>
-            <SummaryRow label="Ganancia del día" value={today.profit} tone="asset" />
+            <SummaryRow label="Ganancia del día" value={today.salesProfit} tone="asset" />
             <SummaryRow label="Gastos del día" value={today.expenses} tone="liability" />
             <div
                 class="mt-2 flex items-center justify-between border-t border-border/60 px-3 py-3"
             >
                 <span class="text-xs font-semibold text-foreground">Ganancia real</span>
                 <span
-                    class="text-base font-bold {today.realProfit >= 0
+                    class="text-base font-bold {today.salesRealProfit >= 0
                         ? 'text-success'
-                        : 'text-destructive'}">{formatCurrency(today.realProfit)}</span
+                        : 'text-destructive'}">{formatCurrency(today.salesRealProfit)}</span
                 >
             </div>
-        </div>
-
-        <div class="mt-5 border-t border-border/60 pt-4">
-            <p class={SECTION}>Créditos del día</p>
-            <div
-                class="flex items-center justify-between rounded-lg px-3 py-2"
-                style="background-color:hsla(32,95%,44%,0.10);border:1px solid hsla(32,95%,44%,0.30)"
-            >
-                <span class="text-xs text-foreground/80">
-                    {today.newCredits.count}
-                    {today.newCredits.count === 1 ? 'crédito generado' : 'créditos generados'}
-                </span>
-                <span class="text-sm font-semibold text-warning"
-                    >{formatCurrency(today.newCredits.total)}</span
-                >
-            </div>
-            <p class="mt-2 text-[10px] italic text-muted-foreground/70">
-                No se incluyen en el ingreso neto (Pasivo: dinero por cobrar).
-            </p>
         </div>
     </div>
 {/if}
