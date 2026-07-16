@@ -26,8 +26,15 @@
             onclick={onClose}
         ></button>
 
+        <!--
+            `w-full` sin tope: el sheet acompaña al ancho disponible. El app-shell
+            no tiene `max-w` en ninguna parte (ver `(app)/+layout.svelte`), así que
+            un tope aquí dejaba una tarjeta angosta y centrada bajo un contenido que
+            sí se estiraba a todo el viewport — dos anchos distintos en la misma
+            pantalla.
+        -->
         <div
-            class="relative mx-auto flex max-h-[85dvh] w-full max-w-[520px] flex-col rounded-t-3xl bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
+            class="relative flex max-h-[85dvh] w-full flex-col rounded-t-3xl bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
         >
             <div class="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-border"></div>
             {#if title}

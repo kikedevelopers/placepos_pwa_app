@@ -10,6 +10,7 @@
     import CategoryField from './CategoryField.svelte'
     import PackagingField from './PackagingField.svelte'
     import PriceRow from './PriceRow.svelte'
+    import PriceInputModeToggle, { type PriceInputMode } from './PriceInputModeToggle.svelte'
     import SwitchRow from './SwitchRow.svelte'
 
     interface Props {
@@ -23,6 +24,11 @@
     }
     let { form, errors, setPackaging, addPrice, removePrice, canAddPrice, canRemovePrice }: Props =
         $props()
+
+    // Cómo se definen TODOS los precios. Estado de UI: no se persiste ni viaja al
+    // backend — lo guardado (sale_price/profit/margin) es idéntico en ambos modos.
+    // Cambiar de modo NO recalcula nada, solo cambia qué campo se escribe.
+    let pricingMode = $state<PriceInputMode>('price')
 
     const pricesError = $derived(errors['prices'])
 
@@ -112,6 +118,7 @@
     <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
             <span class="ml-0.5 text-[13px] font-semibold text-foreground/70">Precios de venta</span>
+            <PriceInputModeToggle mode={pricingMode} onChange={(m) => (pricingMode = m)} />
             {#if canAddPrice}
                 <button
                     type="button"
@@ -129,6 +136,7 @@
         {/if}
         {#each form.prices as price, index (index)}
             <PriceRow
+                mode={pricingMode}
                 {price}
                 {index}
                 cost={form.cost}
