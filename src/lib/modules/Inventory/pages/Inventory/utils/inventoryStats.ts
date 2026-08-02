@@ -21,13 +21,18 @@ export interface InventoryStats {
  * multiplicar `cost × stock` mezclaría unidades e inflaría el total por el factor
  * de empaque. `stock_display` (= stock / packaging.value) lo deja en unidades de
  * empaque, coherente con `cost`. Sin empaque, `stock_display == stock`.
+ *
+ * Los COMBO cuentan como referencia y como agotados, pero NO se valorizan: su
+ * `stock_display` es DERIVADO del stock de sus componentes, que ya están
+ * valorizados por su cuenta. Sumarlos contaría dos veces el mismo inventario
+ * físico. Espejo de `calculateAnalytics` de placepos.
  */
 export function computeInventoryStats(products: Product[]): InventoryStats {
     const base = products.filter((p) => p.parent_id == null)
     return {
         count: base.length,
         valuation: base
-            .filter((p) => p.stock_display > 0)
+            .filter((p) => p.stock_display > 0 && p.product_type !== 'COMBO')
             .reduce((acc, p) => acc + Number(p.cost) * p.stock_display, 0),
         outOfStock: base.filter((p) => p.stock_display <= 0).length
     }

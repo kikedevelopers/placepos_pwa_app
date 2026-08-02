@@ -12,7 +12,7 @@ function makeProduct(p: Partial<Product> & { id: number }): Product {
         cost: p.cost ?? 0,
         stock: p.stock ?? 0,
         stock_display: p.stock_display ?? 0,
-        product_type: 'SIMPLE',
+        product_type: p.product_type ?? 'SIMPLE',
         parent_id: p.parent_id ?? null,
         packaging_id: null,
         category_id: null,
@@ -94,5 +94,35 @@ describe('computeInventoryStats (PWA) — paridad con placepos', () => {
 
     it('inventario vacío da todo en cero', () => {
         expect(computeInventoryStats([])).toEqual({ count: 0, valuation: 0, outOfStock: 0 })
+    })
+})
+
+describe('computeInventoryStats — productos COMBO', () => {
+    // El stock de un combo es DERIVADO del de sus componentes, que ya se
+    // valorizaron por su cuenta: valorizarlo otra vez duplicaría el mismo
+    // inventario físico. Espejo del suite de placepos.
+    const mani = makeProduct({ id: 1, cost: 12000, stock_display: 5 })
+    const combo = makeProduct({
+        id: 9,
+        cost: 900,
+        stock_display: 20,
+        product_type: 'COMBO'
+    })
+
+    it('NO suma el combo a la valorización del inventario', () => {
+        expect(computeInventoryStats([mani, combo]).valuation).toBe(60000)
+    })
+
+    it('el combo SÍ cuenta como referencia registrada', () => {
+        expect(computeInventoryStats([mani, combo]).count).toBe(2)
+    })
+
+    it('un combo sin unidades armables cuenta como agotado', () => {
+        const agotado = makeProduct({ id: 10, cost: 900, stock_display: 0, product_type: 'COMBO' })
+        expect(computeInventoryStats([mani, agotado]).outOfStock).toBe(1)
+    })
+
+    it('un inventario compuesto solo por combos se valoriza en 0', () => {
+        expect(computeInventoryStats([combo]).valuation).toBe(0)
     })
 })
