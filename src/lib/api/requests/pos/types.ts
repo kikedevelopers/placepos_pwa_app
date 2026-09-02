@@ -18,6 +18,16 @@ export type PosProduct = {
     prices: PosPrice[]
     parent: { id: number; name: string; cost: number } | null
     stock: number
+    /** Ruta del objeto en el bucket. `null` = sin imagen. */
+    image: string | null
+    /** URL firmada temporal para pintar la imagen. `null` = sin imagen o firma no disponible. */
+    image_url: string | null
+    /**
+     * Descripción libre del producto. Opcional: si el backend desplegado es
+     * una versión anterior a este campo, llega `undefined`, no `null`
+     * (paridad front-resiliente, ver memoria `feedback_frontend_backend_version_skew`).
+     */
+    description?: string | null
 }
 
 export type PosCustomer = {

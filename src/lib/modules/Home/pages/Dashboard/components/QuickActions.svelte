@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation'
-    import { BarChart3, Boxes, Landmark, Truck, Users, Wallet } from '@lucide/svelte'
+    import { BarChart3, Boxes, Landmark, LayoutGrid, Truck, Users, Wallet } from '@lucide/svelte'
     import type { IconComponent } from '$lib/types/icon'
     import ActionTile from './ActionTile.svelte'
 
@@ -10,11 +10,12 @@
         { label: 'Inventario', icon: Boxes, route: '/inventario' },
         { label: 'Compras', icon: Truck, route: '/compras' },
         { label: 'Billeteras', icon: Wallet, route: '/billeteras' },
-        { label: 'Bancos', icon: Landmark, route: '/bancos' }
+        { label: 'Bancos', icon: Landmark, route: '/bancos' },
+        { label: 'Catálogo', icon: LayoutGrid, route: '/catalogo' }
     ]
 </script>
 
-<div class="grid grid-cols-3 gap-3">
+<div class="grid grid-cols-4 gap-2.5">
     {#each ACTIONS as action (action.label)}
         <ActionTile icon={action.icon} label={action.label} onclick={() => goto(action.route)} />
     {/each}
