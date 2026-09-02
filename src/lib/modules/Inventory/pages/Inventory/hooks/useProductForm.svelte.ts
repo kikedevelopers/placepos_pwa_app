@@ -1,4 +1,5 @@
 import { fromStore } from 'svelte/store'
+import { toast } from 'svelte-sonner'
 import type { ZodError } from 'zod'
 import type { Product, ProductPayload, ProductPricePayload } from '$lib/api/requests/products'
 import { getErrorMessage } from '$lib/utils/errors'
@@ -6,6 +7,7 @@ import { parseDecimal } from '$lib/utils/numbers'
 import { productSchema, type ProductFormData } from '../schemas/product.schema'
 import { toPackageStock, toMinimalStock, repackageStock } from '../utils/baseStock'
 import { usePackagings } from './useCatalogs'
+import { useProductImage } from './useProductImage.svelte'
 import { useProductMutations } from './useProductMutations'
 
 const MAX_PRICES = 4
@@ -54,6 +56,10 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
     const c = fromStore(create)
     const u = fromStore(update)
     const packagingsQuery = fromStore(usePackagings())
+    // La imagen NO viaja en el payload del producto: es un archivo que se sube
+    // aparte, contra el id del item, así que en creación hay que esperar a
+    // tenerlo (ver `submit`).
+    const image = useProductImage({ imagePath: product?.image, currentUrl: product?.image_url })
 
     const form = $state<ProductFormData>(toDefaults(product))
     let attempted = $state(false)
@@ -127,8 +133,22 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
             prices
         }
 
+        // En creación el id lo devuelve el backend; en edición ya lo teníamos.
+        // Sin id no hay contra qué subir la imagen.
+        const handleSaved = async (result: { id: number }) => {
+            const savedId = product?.id ?? result.id
+            const imageError = await image.syncImage(savedId)
+            // El producto YA se guardó: cerrar y avisar del problema de la
+            // imagen aparte. Dejar el formulario abierto invitaría a guardar
+            // otra vez y crear un duplicado.
+            if (imageError) {
+                toast.warning(`Producto guardado, pero la imagen no: ${imageError}`)
+            }
+            onSuccess()
+        }
+
         const handlers = {
-            onSuccess,
+            onSuccess: handleSaved,
             onError: (error: unknown) =>
                 (submitError = getErrorMessage(error) ?? 'No se pudo guardar el producto.')
         }
@@ -142,6 +162,7 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
 
     return {
         form,
+        image,
         setPackaging,
         get errors() {
             return errors
@@ -156,8 +177,13 @@ export function useProductForm(product: Product | null, onSuccess: () => void) {
         },
         submit,
         isEdit,
+        // `isPending` de la mutación baja a `false` en cuanto el producto se
+        // guarda — ANTES de que termine `image.syncImage` dentro de
+        // `handleSaved` (async). Sin `|| image.isUploading` el botón se
+        // rehabilita con la imagen todavía subiendo, y un segundo clic en ese
+        // instante dispara `create.mutate` otra vez → producto duplicado.
         get isSubmitting() {
-            return c.current.isPending || u.current.isPending
+            return c.current.isPending || u.current.isPending || image.isUploading
         },
         get submitError() {
             return submitError

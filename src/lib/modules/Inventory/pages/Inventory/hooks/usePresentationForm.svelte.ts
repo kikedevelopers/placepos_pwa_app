@@ -1,4 +1,5 @@
 import { fromStore } from 'svelte/store'
+import { toast } from 'svelte-sonner'
 import Big from 'big.js'
 import type { ZodError } from 'zod'
 import type { Product, ProductPayload, ProductPricePayload } from '$lib/api/requests/products'
@@ -14,6 +15,7 @@ import {
 } from '../utils/presentationStock'
 import { computeCalculatedCost, computeFromPriceValue } from '../utils/presentationMath'
 import { usePackagings } from './useCatalogs'
+import { useProductImage } from './useProductImage.svelte'
 import { useProducts } from './useProducts'
 import { useProductMutations } from './useProductMutations'
 
@@ -66,6 +68,13 @@ export function usePresentationForm(presentation: Product | null, onSuccess: () 
     const u = fromStore(update)
     const productsQuery = fromStore(useProducts())
     const packagingsQuery = fromStore(usePackagings())
+    // La imagen NO viaja en el payload del producto: es un archivo que se sube
+    // aparte, contra el id del item, así que en creación hay que esperar a
+    // tenerlo (ver `submit`).
+    const image = useProductImage({
+        imagePath: presentation?.image,
+        currentUrl: presentation?.image_url
+    })
 
     const form = $state<PresentationFormData>(toDefaults(presentation))
     let attempted = $state(false)
@@ -184,8 +193,22 @@ export function usePresentationForm(presentation: Product | null, onSuccess: () 
             prices
         }
 
+        // En creación el id lo devuelve el backend; en edición ya lo teníamos.
+        // Sin id no hay contra qué subir la imagen.
+        const handleSaved = async (result: { id: number }) => {
+            const savedId = presentation?.id ?? result.id
+            const imageError = await image.syncImage(savedId)
+            // La presentación YA se guardó: cerrar y avisar del problema de la
+            // imagen aparte. Dejar el formulario abierto invitaría a guardar
+            // otra vez y crear un duplicado.
+            if (imageError) {
+                toast.warning(`Presentación guardada, pero la imagen no: ${imageError}`)
+            }
+            onSuccess()
+        }
+
         const handlers = {
-            onSuccess,
+            onSuccess: handleSaved,
             onError: (error: unknown) =>
                 (submitError = getErrorMessage(error) ?? 'No se pudo guardar la presentación.')
         }
@@ -198,6 +221,7 @@ export function usePresentationForm(presentation: Product | null, onSuccess: () 
 
     return {
         form,
+        image,
         isEdit,
         setParent,
         setMode,
@@ -231,8 +255,13 @@ export function usePresentationForm(presentation: Product | null, onSuccess: () 
             return form.prices.length > 1
         },
         submit,
+        // `isPending` de la mutación baja a `false` en cuanto la presentación
+        // se guarda — ANTES de que termine `image.syncImage` dentro de
+        // `handleSaved` (async). Sin `|| image.isUploading` el botón se
+        // rehabilita con la imagen todavía subiendo, y un segundo clic en ese
+        // instante dispara `create.mutate` otra vez → duplicado.
         get isSubmitting() {
-            return c.current.isPending || u.current.isPending
+            return c.current.isPending || u.current.isPending || image.isUploading
         },
         get submitError() {
             return submitError

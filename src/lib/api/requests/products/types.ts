@@ -2,6 +2,10 @@
 // productos en @Controller('inventory'). stock es la unidad mínima; stock_display
 // es lo que se muestra (stock / packaging.value).
 
+import type { ProductImageSettings } from '$lib/utils/productImage'
+
+export type { ProductImageSettings }
+
 export type ProductType = 'SIMPLE' | 'COMBO'
 
 export type ProductPrice = {
@@ -34,6 +38,13 @@ export type Product = {
     packaging: { id: number; name: string; value: number } | null
     category: { id: number; name: string } | null
     prices: ProductPrice[]
+    // Imagen del item. OPCIONALES a propósito (paridad version-skew con
+    // placepos): un pos_api una versión atrás no los envía, y el front debe
+    // degradar al placeholder en vez de romperse.
+    //   - image: ruta del objeto en el bucket. Sirve para saber SI hay imagen.
+    //   - image_url: URL firmada temporal; es la única que se puede pintar.
+    image?: string | null
+    image_url?: string | null
 }
 
 export type ProductPricePayload = {
@@ -67,4 +78,20 @@ export type ProductPayload = {
 export type ProductListParams = {
     search?: string
     include_archived?: boolean
+}
+
+/** Resultado de `POST /inventory/:id/image`. */
+export type ProductImageResult = {
+    product_id: number
+    /** Ruta del objeto en el bucket (no se pinta: no es accesible por sí sola). */
+    image: string
+    /** URL firmada temporal: esta es la que se muestra. */
+    image_url: string
+}
+
+/** Resultado de `POST /inventory/:id/image/remove`. */
+export type RemoveProductImageResult = {
+    product_id: number
+    /** `false` = el item ya no tenía imagen (la operación es idempotente). */
+    removed: boolean
 }

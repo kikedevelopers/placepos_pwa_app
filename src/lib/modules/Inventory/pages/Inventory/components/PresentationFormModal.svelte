@@ -22,8 +22,9 @@
             <button
                 type="button"
                 onclick={onClose}
+                disabled={ctrl.isSubmitting}
                 aria-label="Cerrar"
-                class="flex h-10 w-10 items-center justify-center rounded-xl transition-opacity active:opacity-60"
+                class="flex h-10 w-10 items-center justify-center rounded-xl transition-opacity active:opacity-60 disabled:opacity-40"
             >
                 <X size={22} color="hsl(215, 16%, 40%)" />
             </button>
@@ -39,6 +40,8 @@
             <PresentationFormFields
                 form={ctrl.form}
                 errors={ctrl.errors}
+                image={ctrl.image}
+                isSubmitting={ctrl.isSubmitting}
                 parentOptions={ctrl.parentOptions}
                 {hasParent}
                 effectiveValue={ctrl.effectiveValue}

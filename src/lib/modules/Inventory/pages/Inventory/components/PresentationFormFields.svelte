@@ -1,10 +1,12 @@
 <script lang="ts">
     import { Package, Plus, Scale } from '@lucide/svelte'
     import FormField from '$lib/components/FormField.svelte'
+    import ImageDropzone from '$lib/components/ImageDropzone.svelte'
     import NumberField from '$lib/components/NumberField.svelte'
     import AutocompleteField from '$lib/components/AutocompleteField.svelte'
     import { formatCurrency, formatNumber } from '$lib/utils/numbers'
     import type { PresentationFormData, PricingMode } from '../schemas/presentation.schema'
+    import type { useProductImage } from '../hooks/useProductImage.svelte'
     import PackagingField from './PackagingField.svelte'
     import PriceRow from './PriceRow.svelte'
     import PriceInputModeToggle, { type PriceInputMode } from './PriceInputModeToggle.svelte'
@@ -13,6 +15,9 @@
     interface Props {
         form: PresentationFormData
         errors: Record<string, string>
+        image: ReturnType<typeof useProductImage>
+        /** Envío en curso (guardando la presentación O subiendo/quitando la imagen). */
+        isSubmitting: boolean
         parentOptions: { id: number; label: string }[]
         hasParent: boolean
         effectiveValue: number
@@ -29,6 +34,8 @@
     let {
         form,
         errors,
+        image,
+        isSubmitting,
         parentOptions,
         hasParent,
         effectiveValue,
@@ -218,6 +225,19 @@
         maxlength={500}
         multiline
     />
+
+    {#if image.isEnabled}
+        <ImageDropzone
+            currentUrl={image.previewUrl}
+            pendingFile={image.pendingFile}
+            hasStoredImage={image.hasStoredImage}
+            settings={image.settings}
+            isUploading={image.isUploading}
+            disabled={isSubmitting}
+            onSelect={image.selectImage}
+            onRemove={image.removeImage}
+        />
+    {/if}
 
     <SwitchRow
         label="Disponible para venta"

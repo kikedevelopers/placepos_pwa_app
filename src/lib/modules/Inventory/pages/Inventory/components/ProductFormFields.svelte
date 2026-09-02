@@ -2,10 +2,12 @@
     import { Plus } from '@lucide/svelte'
     import { fromStore } from 'svelte/store'
     import FormField from '$lib/components/FormField.svelte'
+    import ImageDropzone from '$lib/components/ImageDropzone.svelte'
     import MoneyInput from '$lib/components/MoneyInput.svelte'
     import { formatNumber, parseDecimal } from '$lib/utils/numbers'
     import type { ProductFormData } from '../schemas/product.schema'
     import { usePackagings } from '../hooks/useCatalogs'
+    import type { useProductImage } from '../hooks/useProductImage.svelte'
     import { toMinimalStock } from '../utils/baseStock'
     import CategoryField from './CategoryField.svelte'
     import PackagingField from './PackagingField.svelte'
@@ -16,14 +18,26 @@
     interface Props {
         form: ProductFormData
         errors: Record<string, string>
+        image: ReturnType<typeof useProductImage>
+        /** Envío en curso (guardando el producto O subiendo/quitando la imagen). */
+        isSubmitting: boolean
         setPackaging: (id: number | null) => void
         addPrice: () => void
         removePrice: (index: number) => void
         canAddPrice: boolean
         canRemovePrice: boolean
     }
-    let { form, errors, setPackaging, addPrice, removePrice, canAddPrice, canRemovePrice }: Props =
-        $props()
+    let {
+        form,
+        errors,
+        image,
+        isSubmitting,
+        setPackaging,
+        addPrice,
+        removePrice,
+        canAddPrice,
+        canRemovePrice
+    }: Props = $props()
 
     // Cómo se definen TODOS los precios. Estado de UI: no se persiste ni viaja al
     // backend — lo guardado (sale_price/profit/margin) es idéntico en ambos modos.
@@ -85,6 +99,19 @@
         maxlength={500}
         multiline
     />
+
+    {#if image.isEnabled}
+        <ImageDropzone
+            currentUrl={image.previewUrl}
+            pendingFile={image.pendingFile}
+            hasStoredImage={image.hasStoredImage}
+            settings={image.settings}
+            isUploading={image.isUploading}
+            disabled={isSubmitting}
+            onSelect={image.selectImage}
+            onRemove={image.removeImage}
+        />
+    {/if}
 
     <CategoryField value={form.category_id} onSelect={(id) => (form.category_id = id)} />
     <PackagingField value={form.packaging_id} onSelect={setPackaging} />
