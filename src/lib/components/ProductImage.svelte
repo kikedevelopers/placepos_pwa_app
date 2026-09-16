@@ -1,5 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte'
+    import { env } from '$lib/constants/env'
+    import { resolveImageSrc } from '$lib/utils/productImage'
 
     /**
      * `<img>` con degradación elegante: si la URL firmada falla (vencida,
@@ -16,20 +18,24 @@
     }
     let { url, alt, class: className = '', loading = 'lazy', fallback }: Props = $props()
 
+    // El backend manda una ruta relativa al proxy de pos_api; se le antepone la
+    // base del API para que el <img> del PWA (otro origen) la cargue.
+    const src = $derived(resolveImageSrc(url, env.apiBaseUrl))
+
     let hasFailed = $state(false)
 
     // Una URL nueva merece un intento nuevo: sin este reset, una imagen que
     // falló una vez quedaría marcada como rota para siempre aunque el
     // producto reciba una imagen distinta.
     $effect(() => {
-        void url
+        void src
         hasFailed = false
     })
 </script>
 
-{#if url && !hasFailed}
+{#if src && !hasFailed}
     <img
-        src={url}
+        {src}
         {alt}
         {loading}
         class={className}

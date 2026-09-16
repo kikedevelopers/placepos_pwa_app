@@ -1,9 +1,11 @@
 <script lang="ts">
     import { ImagePlus, Loader2, Trash2, UploadCloud } from '@lucide/svelte'
+    import { env } from '$lib/constants/env'
     import {
         buildImageHint,
         DEFAULT_IMAGE_SETTINGS,
         IMAGE_ACCEPT_ATTRIBUTE,
+        resolveImageSrc,
         validateProductImageFile,
         type ProductImageSettings
     } from '$lib/utils/productImage'
@@ -69,7 +71,9 @@
         return () => URL.revokeObjectURL(url)
     })
 
-    const preview = $derived(pendingPreview ?? currentUrl ?? null)
+    // `pendingPreview` es un blob: local (archivo elegido); `currentUrl` es la
+    // ruta relativa del proxy, que se resuelve contra la base del API.
+    const preview = $derived(pendingPreview ?? resolveImageSrc(currentUrl, env.apiBaseUrl) ?? null)
     // Hay algo que quitar aunque no haya nada que mostrar (firma caída).
     const canRemove = $derived(Boolean(preview) || hasStoredImage)
 

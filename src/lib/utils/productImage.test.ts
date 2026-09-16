@@ -5,6 +5,7 @@ import {
     formatFileSize,
     formatFormatList,
     IMAGE_ACCEPT_ATTRIBUTE,
+    resolveImageSrc,
     validateProductImageFile,
     type ProductImageSettings
 } from './productImage'
@@ -158,5 +159,37 @@ describe('constantes del input', () => {
     it('los defaults arrancan deshabilitados (hasta que el servidor confirme)', () => {
         // Así el campo no parpadea en pantalla en un servidor sin bucket.
         expect(DEFAULT_IMAGE_SETTINGS.enabled).toBe(false)
+    })
+})
+
+describe('resolveImageSrc', () => {
+    const API = 'https://foxpos.kikedevs.com'
+
+    it('antepone la base del API a una ruta relativa del proxy', () => {
+        expect(resolveImageSrc('/product-images/serve?o=x&e=1&s=sig', API)).toBe(
+            'https://foxpos.kikedevs.com/product-images/serve?o=x&e=1&s=sig'
+        )
+    })
+
+    it('no duplica la barra si la base termina en /', () => {
+        expect(resolveImageSrc('/product-images/serve?o=x', 'https://api.test/')).toBe(
+            'https://api.test/product-images/serve?o=x'
+        )
+    })
+
+    it('deja intactas las URLs absolutas (firma antigua de GCS)', () => {
+        const abs = 'https://storage.googleapis.com/bucket/inventory_items/1/2.jpg?sig=abc'
+        expect(resolveImageSrc(abs, API)).toBe(abs)
+    })
+
+    it('deja intactos los blob: y data: (vistas previas locales)', () => {
+        expect(resolveImageSrc('blob:app://uuid', API)).toBe('blob:app://uuid')
+        expect(resolveImageSrc('data:image/png;base64,AAAA', API)).toBe('data:image/png;base64,AAAA')
+    })
+
+    it('null/undefined/"" → undefined (sin src)', () => {
+        expect(resolveImageSrc(null, API)).toBeUndefined()
+        expect(resolveImageSrc(undefined, API)).toBeUndefined()
+        expect(resolveImageSrc('', API)).toBeUndefined()
     })
 })

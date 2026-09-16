@@ -105,3 +105,32 @@ export function formatFileSize(bytes: number): string {
 function trimNumber(value: number): string {
     return String(Number(value.toFixed(2)))
 }
+
+/**
+ * Convierte el `image_url` que devuelve el backend en un `src` pintable.
+ *
+ * El backend ya no manda una URL firmada de GCS (absoluta), sino una RUTA
+ * RELATIVA al proxy de pos_api (`/product-images/serve?...`), porque firmar en
+ * GCS exige una API deshabilitada en el despliegue. El PWA se sirve desde otro
+ * origen (erp.kikedevs.com) distinto al del API (foxpos.kikedevs.com), así que
+ * un `<img src="/product-images/serve...">` resolvería contra el PWA y daría 404.
+ * Aquí se le antepone la base del API (`env.apiBaseUrl`).
+ *
+ * Tolerante: una URL absoluta (http/https, firma antigua de GCS) o un
+ * `blob:`/`data:` de una vista previa local se devuelve tal cual.
+ *
+ * `apiBaseUrl` se pasa por parámetro (no se importa `$env` aquí) para mantener el
+ * util puro y testeable sin acoplarlo a SvelteKit.
+ */
+export function resolveImageSrc(
+    url: string | null | undefined,
+    apiBaseUrl: string
+): string | undefined {
+    if (!url) return undefined
+    if (/^(https?:|blob:|data:)/i.test(url)) return url
+    if (url.startsWith('/')) {
+        const base = apiBaseUrl.replace(/\/+$/, '')
+        return `${base}${url}`
+    }
+    return url
+}
