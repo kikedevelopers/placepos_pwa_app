@@ -19,6 +19,7 @@ export const CONCEPT_LABELS: Record<string, string> = {
     ADJUSTMENT: 'Ajuste',
     CARRIER_PAYMENT: 'Abono a transportista',
     CUSTOMER_ADVANCE: 'Anticipo de cliente',
+    BRANCH_TRANSFER: 'Traslado entre sucursales',
     OTHER: 'Otro'
 }
 

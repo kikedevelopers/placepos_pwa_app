@@ -6,6 +6,7 @@
     import MoneyInput from '$lib/components/MoneyInput.svelte'
     import PrimaryButton from '$lib/components/PrimaryButton.svelte'
     import { useAccountTransfer, type TransferSource } from '../hooks/useAccountTransfer.svelte'
+    import { buildDestinationValue } from '../utils/transferDestinations'
 
     interface Props {
         source: TransferSource
@@ -20,6 +21,15 @@
         wallet: 'Billetera',
         bank: 'Banco'
     }
+
+    // Etiqueta del chip del destino seleccionado (distingue el principal).
+    const selectedLabel = $derived.by(() => {
+        const d = ctrl.selectedDestination
+        if (!d) return ''
+        return d.scope === 'main'
+            ? `Negocio Principal · ${TYPE_LABEL[d.type]}`
+            : TYPE_LABEL[d.type]
+    })
 </script>
 
 <BottomSheet open title="Mover saldo" {onClose}>
@@ -68,21 +78,36 @@
                     {#if ctrl.grouped.users.length > 0}
                         <optgroup label="Cajas de usuarios">
                             {#each ctrl.grouped.users as u (u.id)}
-                                <option value={`user:${u.id}`}>{u.name}</option>
+                                <option value={buildDestinationValue('self', 'user', u.id)}>
+                                    {u.name}
+                                </option>
                             {/each}
                         </optgroup>
                     {/if}
                     {#if ctrl.grouped.wallets.length > 0}
                         <optgroup label="Billeteras">
                             {#each ctrl.grouped.wallets as w (w.id)}
-                                <option value={`wallet:${w.id}`}>{w.name}</option>
+                                <option value={buildDestinationValue('self', 'wallet', w.id)}>
+                                    {w.name}
+                                </option>
                             {/each}
                         </optgroup>
                     {/if}
                     {#if ctrl.grouped.banks.length > 0}
                         <optgroup label="Bancos">
                             {#each ctrl.grouped.banks as b (b.id)}
-                                <option value={`bank:${b.id}`}>{b.name}</option>
+                                <option value={buildDestinationValue('self', 'bank', b.id)}>
+                                    {b.name}
+                                </option>
+                            {/each}
+                        </optgroup>
+                    {/if}
+                    {#if ctrl.grouped.main.length > 0}
+                        <optgroup label={`Negocio Principal · ${ctrl.grouped.mainCompanyName}`}>
+                            {#each ctrl.grouped.main as d (`${d.type}-${d.id}`)}
+                                <option value={buildDestinationValue('main', d.type, d.id)}>
+                                    {d.name} ({d.type === 'bank' ? 'Banco' : 'Billetera'})
+                                </option>
                             {/each}
                         </optgroup>
                     {/if}
@@ -94,7 +119,7 @@
                     <span
                         class="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
                     >
-                        {TYPE_LABEL[ctrl.selectedDestination.type]}
+                        {selectedLabel}
                     </span>
                     <span>·</span>
                     <span>Saldo actual: {formatCurrency(ctrl.selectedDestination.balance)}</span>

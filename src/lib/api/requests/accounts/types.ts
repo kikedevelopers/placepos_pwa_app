@@ -4,12 +4,18 @@ export type TransferSourceType = 'wallet' | 'bank'
 /** Destino de un traslado: billetera, banco o la caja de un usuario. */
 export type TransferDestinationType = 'wallet' | 'bank' | 'user'
 
+/** Alcance del destino: misma empresa ('self') o negocio principal ('main'). */
+export type TransferDestinationScope = 'self' | 'main'
+
 /** Cuenta destino candidata para un traslado. Réplica del `TransferDestinationItem`. */
 export type AccountTransferDestination = {
     id: number
     name: string
     balance: number
     type: TransferDestinationType
+    // Multi-sucursal. Opcional para tolerar respuestas legacy (siempre 'self').
+    scope?: TransferDestinationScope
+    company_name?: string
 }
 
 export type TransferDestinationsResult = {
@@ -23,6 +29,9 @@ export type AccountTransferPayload = {
     destinationType: TransferDestinationType
     destinationId: number
     amount: number
+    // 'main' dispara el traslado sucursal → negocio principal. Se omite para
+    // traslados dentro de la misma empresa (el backend asume 'self').
+    destinationScope?: TransferDestinationScope
 }
 
 export type AccountTransferResult = {

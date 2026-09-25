@@ -9,6 +9,7 @@ import {
 import { getErrorMessage } from '$lib/utils/errors'
 import { roundTo } from '$lib/utils/numbers'
 import { BANK_KEYS, MOVEMENT_KEYS, WALLET_KEYS } from '../constants/queryKeys'
+import { findDestination, groupDestinations } from '../utils/transferDestinations'
 
 export type TransferSource = {
     type: TransferSourceType
@@ -47,7 +48,9 @@ export function useAccountTransfer(source: TransferSource, onSuccess: () => void
     })
     const m = fromStore(mutation)
 
-    // Clave del destino seleccionado con formato "type:id" (ej. "bank:2").
+    // Clave del destino seleccionado con formato "scope|type|id"
+    // (ej. "self|bank|2", "main|wallet|11"). El scope distingue una cuenta del
+    // negocio principal de una propia con el mismo id.
     let selectedKey = $state('')
     let amount = $state<number | null>(null)
     let submitError = $state('')
@@ -55,18 +58,12 @@ export function useAccountTransfer(source: TransferSource, onSuccess: () => void
     const destinations = $derived(dq.current.data ?? [])
     const isLoadingDestinations = $derived(dq.current.isLoading)
 
-    const grouped = $derived({
-        users: destinations.filter((d) => d.type === 'user'),
-        wallets: destinations.filter((d) => d.type === 'wallet'),
-        banks: destinations.filter((d) => d.type === 'bank')
-    })
+    const grouped = $derived(groupDestinations(destinations))
     const hasDestinations = $derived(destinations.length > 0)
 
-    const selectedDestination = $derived.by((): AccountTransferDestination | null => {
-        if (!selectedKey) return null
-        const [type, id] = selectedKey.split(':')
-        return destinations.find((d) => d.type === type && d.id === Number(id)) ?? null
-    })
+    const selectedDestination = $derived.by((): AccountTransferDestination | null =>
+        findDestination(destinations, selectedKey)
+    )
 
     const insufficient = $derived(
         amount != null && amount > 0 && roundTo(source.balance - amount, 2) < 0
@@ -98,7 +95,9 @@ export function useAccountTransfer(source: TransferSource, onSuccess: () => void
                 sourceId: source.id,
                 destinationType: dest.type,
                 destinationId: dest.id,
-                amount: roundTo(amount, 2)
+                amount: roundTo(amount, 2),
+                // Traslado a una caja del negocio principal (cross-empresa).
+                ...(dest.scope === 'main' ? { destinationScope: 'main' as const } : {})
             },
             {
                 onSuccess,
