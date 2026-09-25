@@ -5,9 +5,12 @@
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
+    import SelectField from '$lib/components/SelectField.svelte'
     import ScreenState from '$lib/components/ScreenState.svelte'
     import StatTile from '$lib/components/StatTile.svelte'
+    import { useCustomerCategories } from '$lib/modules/CustomerCategories/hooks/useCustomerCategories'
     import { useCustomerAnalytics, useCustomers } from './hooks/useCustomers'
+    import { filterCustomers } from './utils/filterCustomers'
     import CustomerCard from './components/CustomerCard.svelte'
     import CustomerFormModal from './components/CustomerFormModal.svelte'
 
@@ -17,22 +20,20 @@
 
     const query = useCustomers()
     const analytics = useCustomerAnalytics()
+    const categoriesQuery = useCustomerCategories()
 
     let formOpen = $state(false)
     let editing = $state<Customer | null>(null)
+    // Filtro por categoría ESPECIAL. `null` = todas.
+    let categoryFilter = $state<number | null>(null)
 
     const data = $derived($query.data)
-    const filtered = $derived.by(() => {
-        const list = data ?? []
-        const q = debounced.value.trim().toLowerCase()
-        if (!q) return list
-        return list.filter(
-            (c) =>
-                c.name.toLowerCase().includes(q) ||
-                (c.email ?? '').toLowerCase().includes(q) ||
-                (c.doc_number ?? '').toLowerCase().includes(q)
-        )
-    })
+    const categories = $derived($categoriesQuery.data ?? [])
+    const categoryOptions = $derived([
+        { value: '', label: 'Todas las categorías' },
+        ...categories.map((c) => ({ value: String(c.id), label: c.name }))
+    ])
+    const filtered = $derived(filterCustomers(data ?? [], debounced.value, categoryFilter))
 
     const openCreate = () => {
         editing = null
@@ -65,6 +66,17 @@
                 </button>
             {/if}
         </div>
+
+        {#if categories.length > 0}
+            <!-- Filtro por categoría especial del cliente. -->
+            <SelectField
+                value={categoryFilter === null ? '' : String(categoryFilter)}
+                options={categoryOptions}
+                onChange={(v) => (categoryFilter = v ? Number(v) : null)}
+                placeholder="Todas las categorías"
+                sheetTitle="Filtrar por categoría"
+            />
+        {/if}
 
         {#if $analytics.data}
             <div class="flex gap-3">

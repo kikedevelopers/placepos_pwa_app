@@ -41,6 +41,14 @@
             {#if customer.email}
                 <p class="truncate text-[11px] text-muted-foreground/70">{customer.email}</p>
             {/if}
+            {#if customer.category?.name}
+                <span
+                    class="mt-1 inline-flex max-w-full items-center truncate rounded-full px-2 py-0.5 text-[10px] font-medium"
+                    style="background-color:hsla(217,91%,50%,0.10);color:hsl(217, 91%, 45%)"
+                >
+                    {customer.category.name}
+                </span>
+            {/if}
         </div>
         <ChevronRight size={18} color="hsl(215, 16%, 60%)" />
     </div>

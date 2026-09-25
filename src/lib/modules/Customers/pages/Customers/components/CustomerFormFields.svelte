@@ -2,6 +2,7 @@
     import FormField from '$lib/components/FormField.svelte'
     import type { CustomerFormData } from '../schemas/customer.schema'
     import PersonTypeToggle from './PersonTypeToggle.svelte'
+    import CustomerCategoryField from './CustomerCategoryField.svelte'
 
     interface Props {
         form: CustomerFormData
@@ -55,5 +56,10 @@
         error={errors['address']}
         maxlength={500}
         multiline
+    />
+
+    <CustomerCategoryField
+        value={form.category_id}
+        onChange={(v) => (form.category_id = v)}
     />
 </div>

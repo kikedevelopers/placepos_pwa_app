@@ -13,7 +13,8 @@ const toDefaults = (customer: Customer | null): CustomerFormData => ({
     doc_number: customer?.doc_number ?? '',
     phone: customer?.phone ?? '',
     email: customer?.email ?? '',
-    address: customer?.address ?? ''
+    address: customer?.address ?? '',
+    category_id: customer?.category_id ?? null
 })
 
 /** Aplana los issues de zod a un mapa por ruta. */
@@ -56,7 +57,9 @@ export function useCustomerForm(customer: Customer | null, onSuccess: () => void
             email: blankToUndefined(data.email),
             phone: blankToUndefined(data.phone),
             doc_number: blankToUndefined(data.doc_number),
-            address: blankToUndefined(data.address)
+            address: blankToUndefined(data.address),
+            // Siempre se envía (create y edit): `null` limpia la asociación.
+            category_id: data.category_id
         }
 
         const handlers = {

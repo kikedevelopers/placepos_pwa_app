@@ -16,7 +16,10 @@ export const customerSchema = z
         doc_number: z.string().trim().max(30, 'Máximo 30 caracteres'),
         phone: z.string().trim().max(30, 'Máximo 30 caracteres'),
         email: z.string().trim().max(255, 'Máximo 255 caracteres'),
-        address: z.string().trim().max(500, 'Máximo 500 caracteres')
+        address: z.string().trim().max(500, 'Máximo 500 caracteres'),
+        // Categoría ESPECIAL del cliente. `null` = sin categoría. Id de
+        // customer_categories (positivo).
+        category_id: z.number().int().positive().nullable()
     })
     .superRefine((data, ctx) => {
         if (data.person_type === 'COMPANY' && !data.doc_number) {
