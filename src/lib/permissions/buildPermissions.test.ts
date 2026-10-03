@@ -104,4 +104,55 @@ describe('buildPermissions · visibilidad financiera (subpermisos del configurad
         expect(p.canViewProductMargin).toBe(false)
         expect(p.canViewProductProfit).toBe(false)
     })
+
+    describe('isAdminLevel', () => {
+        const ALL_KEYS = [
+            'canAccessDashboard',
+            'canAccessPOS',
+            'canAccessInventory',
+            'canAccessPackaging',
+            'canAccessCategories',
+            'canAccessBanks',
+            'canAccessWallets',
+            'canAccessCustomers',
+            'canAccessEmployees',
+            'canAccessCarriers',
+            'canAccessSuppliers',
+            'canAccessPurchase',
+            'canAccessSalesReport',
+            'canAccessCreditsReport',
+            'canAccessComparativeReport',
+            'canAccessDailyClosureReport',
+            'canAccessCashierReport',
+            'canAccessClientsReport',
+            'canViewAllSales',
+            'canAccessExpenses',
+            'canAccessFixedExpenses',
+            'canAccessSettings'
+        ]
+
+        it('owner/superadmin SIEMPRE son admin-level (aunque el array venga vacío)', () => {
+            expect(buildPermissions({ type: 'owner', permissions: [] }).isAdminLevel).toBe(true)
+            expect(buildPermissions({ type: 'superadmin', permissions: [] }).isAdminLevel).toBe(
+                true
+            )
+        })
+
+        it('empleado con rol Administrador (todas las keys) es admin-level', () => {
+            const admin = buildPermissions({ type: 'employee', permissions: ALL_KEYS })
+            expect(admin.isAdmin).toBe(false)
+            expect(admin.isAdminLevel).toBe(true)
+        })
+
+        it('Cajero (con canAccessDailyClosureReport pero no todas) NO es admin-level', () => {
+            const cajeroKeys = ALL_KEYS.filter((k) => k !== 'canAccessEmployees')
+            const cajero = buildPermissions({ type: 'employee', permissions: cajeroKeys })
+            expect(cajero.canAccessDailyClosureReport).toBe(true)
+            expect(cajero.isAdminLevel).toBe(false)
+        })
+
+        it('empleado sin permisos NO es admin-level', () => {
+            expect(buildPermissions({ type: 'employee', permissions: [] }).isAdminLevel).toBe(false)
+        })
+    })
 })

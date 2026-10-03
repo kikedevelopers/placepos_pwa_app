@@ -166,3 +166,39 @@ export type DailyClosure = {
         totalDebit: number
     }
 }
+
+/** Cierre diario COMPLETO de una company dentro del consolidado por sucursal. */
+export type BranchDailyClosure = {
+    companyId: number
+    name: string
+    isBranch: boolean
+    closure: DailyClosure
+}
+
+/** Consolidado de todas las companies (suma de titulares; márgenes recalculados). */
+export type BranchesClosureTotals = {
+    cashSales: number
+    consignacionesVentas: number
+    abonosCash: number
+    abonosConsignacion: number
+    abonosTotal: number
+    totalCollected: number
+    ordersTotal: number
+    newCreditsTotal: number
+    newCreditsCount: number
+    salesRevenue: number
+    salesProfit: number
+    salesMargin: number
+    profit: number
+    margin: number
+    finalTotal: number
+    expensesTotal: number
+    pendingCreditsCount: number
+    pendingCreditsBalance: number
+}
+
+export type BranchesDailyClosure = {
+    date: string
+    branches: BranchDailyClosure[]
+    totals: BranchesClosureTotals
+}

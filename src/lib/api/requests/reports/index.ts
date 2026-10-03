@@ -1,6 +1,7 @@
 import api from '$lib/api/config'
 import type { ApiPayload } from '$lib/api/requests/dashboard/types'
 import type {
+    BranchesDailyClosure,
     CreditsReportResponse,
     CreditStatus,
     DailyClosure,
@@ -50,6 +51,16 @@ export const getDailyClosure = async (date?: string): Promise<DailyClosure> => {
     const response = await api.get<ApiPayload<DailyClosure>>('/reports/daily-closure', {
         params: date ? { date } : undefined
     })
+    return response.data.payload
+}
+
+export const getBranchesDailyClosure = async (
+    date?: string
+): Promise<BranchesDailyClosure> => {
+    const response = await api.get<ApiPayload<BranchesDailyClosure>>(
+        '/reports/branches-daily-closure',
+        { params: date ? { date } : undefined }
+    )
     return response.data.payload
 }
 

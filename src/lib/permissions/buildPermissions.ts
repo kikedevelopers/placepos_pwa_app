@@ -34,9 +34,45 @@ export interface Permissions {
 
 export type PermissionKey = keyof Permissions
 
+/**
+ * Las 22 keys gestionables (rol Administrador de fábrica). Un empleado con rol
+ * Administrador las tiene TODAS; ningún otro rol de fábrica las tiene todas.
+ * Deriva `isAdminLevel`.
+ */
+const MANAGED_PERMISSION_KEYS: PermissionKey[] = [
+    'canAccessDashboard',
+    'canAccessPOS',
+    'canAccessInventory',
+    'canAccessPackaging',
+    'canAccessCategories',
+    'canAccessBanks',
+    'canAccessWallets',
+    'canAccessCustomers',
+    'canAccessEmployees',
+    'canAccessCarriers',
+    'canAccessSuppliers',
+    'canAccessPurchase',
+    'canAccessSalesReport',
+    'canAccessCreditsReport',
+    'canAccessComparativeReport',
+    'canAccessDailyClosureReport',
+    'canAccessCashierReport',
+    'canAccessClientsReport',
+    'canViewAllSales',
+    'canAccessExpenses',
+    'canAccessFixedExpenses',
+    'canAccessSettings'
+]
+
 export interface ResolvedPermissions extends Permissions {
     userType: UserType | null
     isAdmin: boolean
+    /**
+     * Nivel ADMIN: owner/superadmin, o empleado con rol Administrador (todas las
+     * keys gestionables). Un Cajero NO es admin-level aunque tenga
+     * `canAccessDailyClosureReport`. Gatea el "Resumen Sucursales".
+     */
+    isAdminLevel: boolean
     /** Predicado genérico: `isAdmin || granted.has(key)`. */
     can: (key: PermissionKey) => boolean
     // Visibilidad financiera. owner/superadmin siempre; empleado según su flag
@@ -75,6 +111,7 @@ export const buildPermissions = (
 
     const granted = new Set(userProfile?.permissions ?? [])
     const can = (key: PermissionKey): boolean => isAdmin || granted.has(key)
+    const isAdminLevel = isAdmin || MANAGED_PERMISSION_KEYS.every((key) => granted.has(key))
 
     // owner/superadmin ven todo siempre; el empleado depende de cada flag.
     const canViewProfit = isAdmin || (userProfile?.can_view_profit ?? false)
@@ -85,6 +122,7 @@ export const buildPermissions = (
     return {
         userType,
         isAdmin,
+        isAdminLevel,
         can,
         canViewProfit,
         canViewCash,

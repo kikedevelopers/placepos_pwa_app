@@ -36,6 +36,10 @@ export const usePermissions = () => {
         get isAdmin(): boolean {
             return resolved().isAdmin
         },
+        /** Nivel admin: owner/superadmin o empleado con rol Administrador. */
+        get isAdminLevel(): boolean {
+            return resolved().isAdminLevel
+        },
         /** Predicado genérico por key del catálogo. */
         can(key: PermissionKey): boolean {
             return resolved().can(key)
