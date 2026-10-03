@@ -1,6 +1,8 @@
 import api from '$lib/api/config'
 import type {
+    BranchesSummary,
     BreakEvenProgress,
+    GetBranchesSummaryResponse,
     GetBreakEvenProgressResponse,
     GetTodayByCashierResponse,
     GetTodaySummaryResponse,
@@ -10,6 +12,13 @@ import type {
 
 export const getTodaySummary = async (): Promise<TodaySummary> => {
     const response = await api.get<GetTodaySummaryResponse>('/dashboard/today')
+    return response.data.payload
+}
+
+export const getBranchesSummary = async (date?: string): Promise<BranchesSummary> => {
+    const response = await api.get<GetBranchesSummaryResponse>('/dashboard/branches-summary', {
+        params: date ? { date } : undefined
+    })
     return response.data.payload
 }
 

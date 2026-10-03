@@ -146,6 +146,35 @@ export type BreakEvenProgress = {
     dayProgress: number
 }
 
+/**
+ * Fila del resumen consolidado por sucursal (owner multi-sucursal). Cifras del
+ * "Resumen de ventas del día" (base devengado) de cada company: `sales` = ventas
+ * del día, `profit`+`margin` ganancia devengada, `expenses` gastos variables y
+ * `total` = `sales − expenses`.
+ */
+export type BranchSummaryRow = {
+    companyId: number
+    name: string
+    isBranch: boolean
+    sales: number
+    profit: number
+    margin: number
+    expenses: number
+    total: number
+}
+
+export type BranchesSummary = {
+    date: string
+    rows: BranchSummaryRow[]
+    totals: {
+        sales: number
+        profit: number
+        margin: number
+        expenses: number
+        total: number
+    }
+}
+
 export type ApiPayload<T> = {
     success: boolean
     payload: T
@@ -155,3 +184,4 @@ export type ApiPayload<T> = {
 export type GetTodaySummaryResponse = ApiPayload<TodaySummary>
 export type GetTodayByCashierResponse = ApiPayload<TodayByCashier>
 export type GetBreakEvenProgressResponse = ApiPayload<BreakEvenProgress>
+export type GetBranchesSummaryResponse = ApiPayload<BranchesSummary>
