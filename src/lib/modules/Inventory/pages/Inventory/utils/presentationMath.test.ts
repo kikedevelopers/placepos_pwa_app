@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeCalculatedCost, computeFromPriceValue } from './presentationMath'
+import { computeCalculatedCost } from './presentationMath'
 
 describe('computeCalculatedCost', () => {
     it('costo = (costo padre / value padre) × effectiveValue', () => {
@@ -22,21 +22,5 @@ describe('computeCalculatedCost', () => {
         expect(computeCalculatedCost(1000, 0, 5)).toBe(0)
         expect(computeCalculatedCost(1000, 25, 0)).toBe(0)
         expect(computeCalculatedCost(1000, -1, 5)).toBe(0)
-    })
-})
-
-describe('computeFromPriceValue', () => {
-    it('cantidad = precioMaxPres × valuePadre / precioMaxPadre', () => {
-        // 2500 × 25 / 44000 = 1.4204… → 1.42
-        expect(computeFromPriceValue(2500, 25, 44000)).toBe(1.42)
-    })
-
-    it('proporcional (media unidad)', () => {
-        // 500 × 10 / 1000 = 5
-        expect(computeFromPriceValue(500, 10, 1000)).toBe(5)
-    })
-
-    it('devuelve 0 si no hay precio de padre', () => {
-        expect(computeFromPriceValue(2500, 25, 0)).toBe(0)
     })
 })

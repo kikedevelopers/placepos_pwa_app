@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Mail, MapPin, Phone, Receipt, StickyNote, User } from '@lucide/svelte'
+    import { IdCard, Mail, MapPin, Phone, Receipt, StickyNote, User } from '@lucide/svelte'
     import type { CompanyProfile } from '$lib/api/requests/authentication/types'
     import type { SaleDetail } from '$lib/api/requests/sales'
     import { formatCurrency, formatNumber } from '$lib/utils/numbers'
@@ -64,6 +64,7 @@
     <div class="mb-3 flex flex-col gap-1">
         {@render metaRow(Receipt, `Fecha: ${formatDate(sale.createdAt)}`)}
         {@render metaRow(User, `Cliente: ${sale.customerName}`)}
+        {#if sale.customerDocNumber?.trim()}{@render metaRow(IdCard, `Documento: ${sale.customerDocNumber.trim()}`)}{/if}
         {#if sale.createdBy}{@render metaRow(User, `Vendedor: ${sale.createdBy}`)}{/if}
     </div>
 

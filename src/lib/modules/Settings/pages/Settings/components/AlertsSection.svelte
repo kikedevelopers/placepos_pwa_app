@@ -7,6 +7,7 @@
     import ScreenState from '$lib/components/ScreenState.svelte'
     import StatusBanner from '$lib/components/StatusBanner.svelte'
     import SectionHeader from './SectionHeader.svelte'
+    import EmailAlertsPanel from './EmailAlertsPanel.svelte'
     import { inactiveCustomerSchema, inactiveCustomerDefaults } from '../schemas/alerts'
     import { useAlertConfig, useUpdateAlertConfig } from '../hooks/useAlertSettings'
 
@@ -187,4 +188,7 @@
             </div>
         </div>
     {/if}
+
+    <!-- Alertas por CORREO (solo nivel admin). El panel se oculta solo si no aplica. -->
+    <EmailAlertsPanel />
 </div>

@@ -6,12 +6,10 @@ const BARCODE_REGEX = /^[a-zA-Z0-9]*$/
  * Modos de medida de la presentación (espejo de placepos `pricing_mode`):
  *  - `packaging`: empaque fijo (factor por unidad = value del empaque).
  *  - `quantity`: peso variable, se ingresa la cantidad por unidad.
- *  - `from_price`: peso variable, la cantidad se calcula desde el precio más alto.
  */
 export const PRICING_MODE = {
     PACKAGING: 'packaging',
-    QUANTITY: 'quantity',
-    FROM_PRICE: 'from_price'
+    QUANTITY: 'quantity'
 } as const
 export type PricingMode = (typeof PRICING_MODE)[keyof typeof PRICING_MODE]
 
@@ -34,7 +32,7 @@ export const presentationSchema = z
         description: z.string().trim().max(500, 'Máximo 500 caracteres'),
         parent_id: z.number().int().positive('Selecciona un producto base'),
         show_in_pos: z.boolean(),
-        pricing_mode: z.enum(['packaging', 'quantity', 'from_price']),
+        pricing_mode: z.enum(['packaging', 'quantity']),
         packaging_id: z.number().int().positive().nullable(),
         packaging_value: z.number(),
         prices: z.array(priceSchema).min(1, 'Agrega al menos un precio').max(4, 'Máximo 4 precios')

@@ -60,6 +60,12 @@ export const buildTicketPdfHtml = (sale: SaleDetail, company: CompanyProfile | n
         ? `<div class="info-text"><span class="info-bold">Vendedor: </span>${escapeHtml(sale.createdBy)}</div>`
         : ''
 
+    // Documento del cliente (CC/NIT): SOLO cuando hay valor (consumidor final o
+    // cliente sin documento → no se pinta).
+    const docRow = sale.customerDocNumber?.trim()
+        ? `<div class="info-text"><span class="info-bold">Documento: </span>${escapeHtml(sale.customerDocNumber.trim())}</div>`
+        : ''
+
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -145,6 +151,7 @@ export const buildTicketPdfHtml = (sale: SaleDetail, company: CompanyProfile | n
     <div class="info-box">
       <div class="info-label">Datos del Cliente</div>
       <div class="info-text info-bold">${escapeHtml(sale.customerName)}</div>
+      ${docRow}
     </div>
     <div class="info-box">
       <div class="info-label">Información del Documento</div>

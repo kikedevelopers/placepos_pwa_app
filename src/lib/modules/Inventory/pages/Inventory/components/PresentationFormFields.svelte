@@ -56,7 +56,6 @@
     let pricingMode = $state<PriceInputMode>('price')
 
     const isPackaging = $derived(form.pricing_mode === 'packaging')
-    const isFromPrice = $derived(form.pricing_mode === 'from_price')
     const pricesError = $derived(errors['prices'])
 </script>
 
@@ -121,46 +120,14 @@
                 <p class="ml-0.5 text-xs text-destructive">{errors['packaging_id']}</p>
             {/if}
         {:else}
-            <!-- Submodo peso variable: ingresar peso | desde el precio -->
-            <div class="flex gap-2">
-                <button
-                    type="button"
-                    onclick={() => setMode('quantity')}
-                    class="flex-1 rounded-xl border px-3 py-2 text-xs font-semibold {!isFromPrice
-                        ? 'border-primary/40 bg-primary/[0.06] text-primary'
-                        : 'border-border text-muted-foreground'}"
-                >
-                    Ingresar peso
-                </button>
-                <button
-                    type="button"
-                    onclick={() => setMode('from_price')}
-                    class="flex-1 rounded-xl border px-3 py-2 text-xs font-semibold {isFromPrice
-                        ? 'border-primary/40 bg-primary/[0.06] text-primary'
-                        : 'border-border text-muted-foreground'}"
-                >
-                    Desde el precio
-                </button>
-            </div>
-
-            {#if isFromPrice}
-                <div class="rounded-xl border border-border bg-secondary/40 px-3.5 py-3">
-                    <p class="text-[11px] text-muted-foreground">
-                        Cantidad calculada desde el precio más alto
-                    </p>
-                    <p class="mt-0.5 text-base font-bold text-foreground">
-                        {formatNumber(effectiveValue)}
-                    </p>
-                </div>
-            {:else}
-                <NumberField
-                    label="Cantidad por unidad (unidad base)"
-                    value={form.packaging_value || null}
-                    onValueChange={(v) => (form.packaging_value = v ?? 0)}
-                    error={errors['packaging_value']}
-                    min={0}
-                />
-            {/if}
+            <!-- Peso variable: cantidad por unidad (unidad base) -->
+            <NumberField
+                label="Cantidad por unidad (unidad base)"
+                value={form.packaging_value || null}
+                onValueChange={(v) => (form.packaging_value = v ?? 0)}
+                error={errors['packaging_value']}
+                min={0}
+            />
         {/if}
     </div>
 

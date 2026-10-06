@@ -71,6 +71,10 @@ export type SaleDetail = {
     profit: number
     margin: number
     customerName: string
+    // Número de documento del cliente (CC/NIT, `customers.doc_number`). `null`
+    // si no lo tiene o si es venta de mostrador. El recibo pinta la línea
+    // "Documento:" SOLO cuando hay valor. Opcional por tolerancia a version-skew.
+    customerDocNumber?: string | null
     notes: string | null
     createdBy: string | null
     createdAt: string

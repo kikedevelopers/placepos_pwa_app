@@ -13,7 +13,7 @@ import {
     computePresentationRemainder,
     computePresentationStock
 } from '../utils/presentationStock'
-import { computeCalculatedCost, computeFromPriceValue } from '../utils/presentationMath'
+import { computeCalculatedCost } from '../utils/presentationMath'
 import { usePackagings } from './useCatalogs'
 import { useProductImage } from './useProductImage.svelte'
 import { useProducts } from './useProducts'
@@ -24,8 +24,6 @@ Big.RM = Big.roundHalfUp
 
 const MAX_PRICES = 4
 const round2 = (n: number): number => Number(new Big(Number.isFinite(n) ? n : 0).round(2).toString())
-const maxPrice = (prices: { sale_price?: number }[]): number =>
-    prices.reduce((m, p) => Math.max(m, p.sale_price ?? 0), 0)
 
 const toDefaults = (p: Product | null): PresentationFormData => ({
     name: p?.name ?? '',
@@ -107,15 +105,8 @@ export function usePresentationForm(presentation: Product | null, onSuccess: () 
         if (form.pricing_mode === 'packaging') {
             return selectedPackaging && selectedPackaging.value > 0 ? selectedPackaging.value : 0
         }
-        if (form.pricing_mode === 'quantity') {
-            return round2(form.packaging_value)
-        }
-        // from_price: cantidad = precioMaxPres × valuePadre / precioMaxPadre.
-        return computeFromPriceValue(
-            maxPrice(form.prices),
-            parentPackagingValue,
-            maxPrice(selectedParent?.prices ?? [])
-        )
+        // quantity
+        return round2(form.packaging_value)
     })
 
     // Costo calculado del padre: (costo/unidad-base del padre) × effectiveValue.

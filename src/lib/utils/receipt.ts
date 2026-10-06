@@ -30,6 +30,9 @@ export const buildReceipt = (sale: SaleDetail, company: string): string => {
         `${sale.ticketType === 'SALE' ? 'Venta' : 'Pedido'} ${sale.saleNumber ?? sale.ticketNumber}`,
         formatDateTime(sale.createdAt),
         `Cliente: ${sale.customerName}`,
+        // Documento del cliente (CC/NIT): SOLO cuando hay valor; el filter(Boolean)
+        // de abajo descarta la cadena vacía en consumidor final / sin documento.
+        sale.customerDocNumber?.trim() ? `Documento: ${sale.customerDocNumber.trim()}` : '',
         '--------------------------------',
         lines,
         '--------------------------------',

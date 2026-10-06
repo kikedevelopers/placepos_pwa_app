@@ -5,5 +5,6 @@ export const SETTINGS_KEYS = {
     posMargins: ['settings', 'pos-margins'] as const,
     strictInventory: ['settings', 'strict-inventory'] as const,
     includeOrdersInReports: ['settings', 'include-orders-in-reports'] as const,
-    alertConfig: (type: string) => ['settings', 'alert-config', type] as const
+    alertConfig: (type: string) => ['settings', 'alert-config', type] as const,
+    emailAlerts: ['settings', 'email-alerts'] as const
 }
