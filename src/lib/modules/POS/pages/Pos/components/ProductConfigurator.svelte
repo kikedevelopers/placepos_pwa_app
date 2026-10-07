@@ -15,6 +15,8 @@
         initial: ConfiguratorInitial | null
         onClose: () => void
         onConfirm: (item: NewCartItem) => void
+        /** Clic en la foto del producto → abre la carta informativa (catálogo). */
+        onShowInfo: (product: PosProduct) => void
     }
 </script>
 
@@ -22,6 +24,8 @@
     import Minus from '@lucide/svelte/icons/minus'
     import Plus from '@lucide/svelte/icons/plus'
     import Scale from '@lucide/svelte/icons/scale'
+    import Package from '@lucide/svelte/icons/package'
+    import ProductImage from '$lib/components/ProductImage.svelte'
     import MoneyInput from '$lib/components/MoneyInput.svelte'
     import PrimaryButton from '$lib/components/PrimaryButton.svelte'
     import ToggleSwitch from '$lib/components/ToggleSwitch.svelte'
@@ -37,7 +41,7 @@
     } from '$lib/modules/POS/utils/posLineMath'
     import type { NewCartItem } from '$lib/modules/POS/store/posCart.svelte'
 
-    let { visible, product, initial, onClose, onConfirm }: ProductConfiguratorProps = $props()
+    let { visible, product, initial, onClose, onConfirm, onShowInfo }: ProductConfiguratorProps = $props()
 
     // Subpermisos del configurador (espejo de placepos desktop): Ganancia ($) y
     // Margen (%) se gatean por separado. owner siempre; empleado según cada flag.
@@ -223,10 +227,26 @@
                     class="mb-4 h-1 w-10 self-center rounded-full bg-border"
                     style="margin-inline:auto"
                 ></div>
-                <p class="truncate text-base font-bold text-foreground">{product.name}</p>
-                <p class="mb-4 text-xs text-muted-foreground">
-                    Stock: {formatNumber(product.stock)}
-                </p>
+                <div class="mb-4 flex items-center gap-3">
+                    <button
+                        type="button"
+                        onclick={() => onShowInfo(product)}
+                        aria-label={`Ver información de ${product.name}`}
+                        class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary/40 active:opacity-70"
+                    >
+                        <ProductImage url={product.image_url} alt={product.name} class="max-h-full max-w-full object-contain p-1">
+                            {#snippet fallback()}
+                                <Package size={26} color="hsl(217, 91%, 50%)" strokeWidth={1.8} />
+                            {/snippet}
+                        </ProductImage>
+                    </button>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-base font-bold text-foreground">{product.name}</p>
+                        <p class="text-xs text-muted-foreground">
+                            Stock: {formatNumber(product.stock)}
+                        </p>
+                    </div>
+                </div>
 
                 <!-- Cantidad -->
                 <p class="mb-2 text-[13px] font-semibold text-foreground/70">Cantidad</p>

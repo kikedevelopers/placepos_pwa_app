@@ -34,6 +34,7 @@
     import ProductRow from './components/ProductRow.svelte'
     import ViewModeToggle, { type PosViewMode } from './components/ViewModeToggle.svelte'
     import ProductConfigurator from './components/ProductConfigurator.svelte'
+    import ProductInfoModal from './components/ProductInfoModal.svelte'
     import CartSheet from './components/CartSheet.svelte'
     import PostActionDialog from './components/PostActionDialog.svelte'
     import ChargeHost from '$lib/components/ChargeHost.svelte'
@@ -112,6 +113,8 @@
 
     // Estado de apertura de modales / flujo de 2 fases.
     let config = $state<ConfigState | null>(null)
+    // Producto mostrado en la carta informativa (catálogo). null = cerrada.
+    let infoProduct = $state<PosProduct | null>(null)
     let cartOpen = $state(false)
     let scanOpen = $state(false)
     let ticketsOpen = $state(false)
@@ -303,6 +306,7 @@
                             <ProductCard
                                 {product}
                                 onPress={() => (config = { product, initial: null, editId: null })}
+                                onShowInfo={(p) => (infoProduct = p)}
                             />
                         {/each}
                     </div>
@@ -312,6 +316,7 @@
                             <ProductRow
                                 {product}
                                 onPress={() => (config = { product, initial: null, editId: null })}
+                                onShowInfo={(p) => (infoProduct = p)}
                             />
                         {/each}
                     </div>
@@ -381,7 +386,12 @@
         initial={config?.initial ?? null}
         onClose={() => (config = null)}
         onConfirm={onConfirmConfig}
+        onShowInfo={(p) => (infoProduct = p)}
     />
+
+    <!-- Carta informativa del producto (imagen grande + precio + descripción).
+         Se abre al tocar la foto en la grilla/lista o en el configurador. -->
+    <ProductInfoModal product={infoProduct} onClose={() => (infoProduct = null)} />
 
     <!-- Carrito. -->
     <CartSheet
