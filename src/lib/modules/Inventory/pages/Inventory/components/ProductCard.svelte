@@ -12,6 +12,12 @@
 
     const LOW_STOCK_THRESHOLD = 10
 
+    // Miniatura: la URL firmada puede expirar o fallar; si la imagen no carga,
+    // caemos al icono. `image_url` ya viene resuelta por pos_api (firmada; en una
+    // presentación se resuelve desde el base).
+    let imgError = $state(false)
+    const imageUrl = $derived(product.image_url ?? null)
+
     const isChild = $derived(product.parent_id !== null)
     const lowStock = $derived(product.stock_display < LOW_STOCK_THRESHOLD)
     const price = $derived(product.prices?.[0]?.sale_price)
@@ -29,10 +35,20 @@
     <div class="rounded-2xl border border-border bg-card p-4">
         <div class="mb-2 flex items-center gap-3">
             <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl"
+                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl"
                 style="background-color: hsla(217, 91%, 50%, 0.12)"
             >
-                <Package size={18} color="hsl(217, 91%, 50%)" strokeWidth={2} />
+                {#if imageUrl && !imgError}
+                    <img
+                        src={imageUrl}
+                        alt={product.name}
+                        class="h-full w-full object-cover"
+                        loading="lazy"
+                        onerror={() => (imgError = true)}
+                    />
+                {:else}
+                    <Package size={18} color="hsl(217, 91%, 50%)" strokeWidth={2} />
+                {/if}
             </div>
             <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-semibold text-foreground">{product.name}</p>
