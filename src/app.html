@@ -4,6 +4,10 @@
         <meta charset="utf-8" />
         <link rel="icon" href="%sveltekit.assets%/favicon.png" />
         <link rel="apple-touch-icon" href="%sveltekit.assets%/icons/icon-192.png" />
+        <!-- Manifest del PWA. SIN esto, Android Chrome no ofrece instalar ("No se
+             puede instalar"); iOS sí instala por las meta de Apple de abajo. El
+             archivo lo genera vite-plugin-pwa en la raíz del build. -->
+        <link rel="manifest" href="/manifest.webmanifest" />
         <meta
             name="viewport"
             content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
