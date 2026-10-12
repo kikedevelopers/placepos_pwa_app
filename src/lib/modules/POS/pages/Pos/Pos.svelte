@@ -16,6 +16,8 @@
     } from '$lib/api/requests/pos'
     import ScreenState from '$lib/components/ScreenState.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
+    import VirtualList from '$lib/components/VirtualList.svelte'
+    import { chunk } from '$lib/utils/virtualWindow'
     import { TicketViewerHost } from '$lib/components/TicketViewer'
     import { useResponsive } from '$lib/hooks/useResponsive.svelte'
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
@@ -142,6 +144,15 @@
                 p.bar_code.toLowerCase().includes(q)
         )
     })
+
+    // Virtualización: en modo cuadros cada "fila" de la ventana es una fila de
+    // la grilla (chunk de `cols` productos); en lista es un producto por fila.
+    const gridRows = $derived(chunk(products, cols))
+    // Espacio inferior para que la última tarjeta no quede tapada por la barra
+    // de carrito (pb-28 ≈ 112px) cuando hay artículos.
+    const listPadEnd = $derived(posCart.count > 0 ? 112 : 24)
+    // Al cambiar búsqueda, modo de vista o nº de columnas, el scroll vuelve al tope.
+    const posResetKey = $derived(`${debounced.value}|${viewMode}|${cols}`)
 
     const onConfirmConfig = (item: NewCartItem) => {
         if (config?.editId) {
@@ -290,19 +301,24 @@
             <ScreenState kind="error" message={getErrorMessage(error)} />
         {:else if products.length === 0}
             <ScreenState kind="empty" message="No hay productos para mostrar." />
-        {:else}
-            <div
-                class="h-full overflow-y-auto px-5 pt-2 transition-[padding] duration-200"
-                class:pb-28={posCart.count > 0}
-                class:pb-6={posCart.count === 0}
+        {:else if viewMode === 'grid'}
+            <VirtualList
+                items={gridRows}
+                getKey={(row) => row[0]?.id ?? 0}
+                estimateHeight={210}
+                gap={12}
+                padStart={8}
+                padEnd={listPadEnd}
+                resetKey={posResetKey}
+                class="h-full px-5"
             >
-                {#if viewMode === 'grid'}
+                {#snippet children(row)}
                     <div
                         class="grid gap-3"
                         class:grid-cols-2={cols === 2}
                         class:grid-cols-4={cols === 4}
                     >
-                        {#each products as product (product.id)}
+                        {#each row as product (product.id)}
                             <ProductCard
                                 {product}
                                 onPress={() => (config = { product, initial: null, editId: null })}
@@ -310,18 +326,27 @@
                             />
                         {/each}
                     </div>
-                {:else}
-                    <div class="flex flex-col gap-2.5">
-                        {#each products as product (product.id)}
-                            <ProductRow
-                                {product}
-                                onPress={() => (config = { product, initial: null, editId: null })}
-                                onShowInfo={(p) => (infoProduct = p)}
-                            />
-                        {/each}
-                    </div>
-                {/if}
-            </div>
+                {/snippet}
+            </VirtualList>
+        {:else}
+            <VirtualList
+                items={products}
+                getKey={(product) => product.id}
+                estimateHeight={70}
+                gap={10}
+                padStart={8}
+                padEnd={listPadEnd}
+                resetKey={posResetKey}
+                class="h-full px-5"
+            >
+                {#snippet children(product)}
+                    <ProductRow
+                        {product}
+                        onPress={() => (config = { product, initial: null, editId: null })}
+                        onShowInfo={(p) => (infoProduct = p)}
+                    />
+                {/snippet}
+            </VirtualList>
         {/if}
     </div>
 
