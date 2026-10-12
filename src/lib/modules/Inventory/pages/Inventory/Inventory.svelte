@@ -8,6 +8,7 @@
     import SearchField from '$lib/components/SearchField.svelte'
     import ScreenState from '$lib/components/ScreenState.svelte'
     import StatTile from '$lib/components/StatTile.svelte'
+    import VirtualList from '$lib/components/VirtualList.svelte'
     import { useProducts } from './hooks/useProducts'
     import { computeInventoryStats } from './utils/inventoryStats'
     import ProductCard from './components/ProductCard.svelte'
@@ -69,8 +70,11 @@
     }
 </script>
 
-<div class="flex flex-1 flex-col gap-3 px-5 pb-8 pt-4">
-    <div class="flex flex-col gap-4 pb-3">
+<!-- Alto acotado al viewport: el header (buscador + stats) queda fijo y SOLO la
+     lista scrollea, virtualizada, para no congelar el render con cientos de
+     tarjetas. -->
+<div class="flex min-h-0 flex-1 flex-col px-5 pt-4">
+    <div class="flex shrink-0 flex-col gap-4 pb-3">
         <div class="flex gap-3">
             <div class="flex-1">
                 <SearchField
@@ -130,9 +134,21 @@
         {/if}
     </div>
 
-    {#each filtered as product (product.id)}
-        <ProductCard {product} onclick={() => openEdit(product)} />
-    {/each}
+    {#if data && filtered.length > 0}
+        <VirtualList
+            items={filtered}
+            getKey={(product) => product.id}
+            estimateHeight={132}
+            gap={12}
+            padEnd={32}
+            resetKey={debounced.value}
+            class="-mx-5 flex-1 px-5"
+        >
+            {#snippet children(product)}
+                <ProductCard {product} onclick={() => openEdit(product)} />
+            {/snippet}
+        </VirtualList>
+    {/if}
 </div>
 
 <CreateMenuSheet
