@@ -2,6 +2,8 @@
     import { Package } from '@lucide/svelte'
     import type { Product } from '$lib/api/requests/products'
     import { formatCurrency, formatNumber } from '$lib/utils/numbers'
+    import { resolveImageSrc } from '$lib/utils/productImage'
+    import { env } from '$lib/constants/env'
     import PressableScale from '$lib/components/PressableScale.svelte'
 
     interface Props {
@@ -12,11 +14,12 @@
 
     const LOW_STOCK_THRESHOLD = 10
 
-    // Miniatura: la URL firmada puede expirar o fallar; si la imagen no carga,
-    // caemos al icono. `image_url` ya viene resuelta por pos_api (firmada; en una
-    // presentación se resuelve desde el base).
+    // Miniatura: `image_url` llega como RUTA RELATIVA al proxy del API
+    // (`/product-images/serve?...`); `resolveImageSrc` le antepone la base del
+    // API (el PWA vive en otro origen que el backend). Si la imagen no carga,
+    // caemos al icono.
     let imgError = $state(false)
-    const imageUrl = $derived(product.image_url ?? null)
+    const imageUrl = $derived(resolveImageSrc(product.image_url, env.apiBaseUrl) ?? null)
 
     const isChild = $derived(product.parent_id !== null)
     const lowStock = $derived(product.stock_display < LOW_STOCK_THRESHOLD)
