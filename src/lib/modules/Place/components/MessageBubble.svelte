@@ -2,6 +2,7 @@
     import { Copy, Check, RotateCcw, Info } from '@lucide/svelte'
     import PlaceMark from './PlaceMark.svelte'
     import { renderMarkdown } from '$lib/modules/Place/lib/markdown'
+    import { describeToolIcon } from '$lib/modules/Place/lib/tool-icons'
     import type { ChatMessage } from '$lib/modules/Place/store/chat.svelte'
 
     interface Props {
@@ -44,10 +45,11 @@
             {#if runningTools.length > 0}
                 <div class="flex flex-wrap gap-1.5">
                     {#each runningTools as tool (tool.name)}
+                        {@const ToolIcon = describeToolIcon(tool.name)}
                         <span
                             class="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10.5px] text-muted-foreground"
                         >
-                            {#if tool.status === 'running'}<span class="place-dot"></span>{/if}
+                            {#if tool.status === 'running'}<span class="place-dot"></span>{:else}<ToolIcon class="size-3" aria-hidden="true" />{/if}
                             {tool.label}
                         </span>
                     {/each}
