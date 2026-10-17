@@ -5,6 +5,7 @@ import {
     settledStatus,
     type AssistantCard
 } from '$lib/modules/Place/lib/cards'
+import type { TimedCredits } from '$lib/modules/Place/lib/credits'
 
 export interface ChatTool {
     name: string
@@ -40,6 +41,8 @@ const uid = (): string =>
 class PlaceChatStore {
     messages = $state<ChatMessage[]>([])
     isStreaming = $state(false)
+    /** Créditos del día según el último mensaje enviado. */
+    credits = $state<TimedCredits | null>(null)
     private controller: AbortController | null = null
     private hydrated = false
 
@@ -160,7 +163,9 @@ class PlaceChatStore {
             onEvent: (event) => {
                 const msg = this.messages[this.messages.length - 1]
                 if (!msg || msg.id !== assistant.id) return
-                if (event.type === 'card') {
+                if (event.type === 'credits') {
+                    this.credits = { credits: event.credits, at: Date.now() }
+                } else if (event.type === 'card') {
                     this.applyCard(msg, event.card)
                 } else if (event.type === 'delta') {
                     msg.content += event.text

@@ -5,11 +5,24 @@
         assistantName: string
         isStreaming: boolean
         disabled?: boolean
+        /** Placeholder cuando está deshabilitado (p. ej. sin consultas del día). */
+        disabledPlaceholder?: string
+        /** Línea informativa del pie (p. ej. "Te quedan 3 consultas hoy"). */
+        hint?: string | null
         seed?: { value: string; token: number } | null
         onsend: (text: string) => void
         onstop: () => void
     }
-    let { assistantName, isStreaming, disabled = false, seed = null, onsend, onstop }: Props = $props()
+    let {
+        assistantName,
+        isStreaming,
+        disabled = false,
+        disabledPlaceholder,
+        hint = null,
+        seed = null,
+        onsend,
+        onstop
+    }: Props = $props()
 
     let draft = $state('')
     let textarea: HTMLTextAreaElement | null = $state(null)
@@ -67,7 +80,7 @@
             rows="1"
             {disabled}
             placeholder={disabled
-                ? `${assistantName} no está disponible`
+                ? (disabledPlaceholder ?? `${assistantName} no está disponible`)
                 : `Pregúntale a ${assistantName}…`}
             class="max-h-[140px] flex-1 resize-none bg-transparent py-2 text-[14px] leading-[1.5] text-foreground outline-none placeholder:text-muted-foreground/70 disabled:opacity-60"
         ></textarea>
@@ -97,6 +110,6 @@
         {/if}
     </div>
     <p class="mt-1 px-1 text-center text-[10.5px] text-muted-foreground/60">
-        La IA puede equivocarse. Verifica los datos importantes.
+        {hint ? `${hint} · ` : ''}La IA puede equivocarse. Verifica los datos importantes.
     </p>
 </div>

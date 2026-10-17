@@ -7,6 +7,7 @@
  */
 
 import { parseCard, type AssistantCard } from './cards'
+import { parseCredits, type AiCredits } from './credits'
 
 export interface SseFrame {
     event: string
@@ -55,6 +56,8 @@ export type AiStreamEvent =
           status: 'running' | 'done' | 'error'
       }
     | { type: 'card'; card: AssistantCard }
+    /** Créditos del día tras reservar este mensaje (o al agotarse). */
+    | { type: 'credits'; credits: AiCredits }
     | { type: 'done'; notice?: string }
     | { type: 'error'; message: string }
 
@@ -89,6 +92,10 @@ export const parseStreamFrame = (frame: SseFrame): AiStreamEvent | null => {
                 label: typeof data.label === 'string' ? data.label : data.name,
                 status
             }
+        }
+        case 'credits': {
+            const credits = parseCredits(data)
+            return credits ? { type: 'credits', credits } : null
         }
         case 'card': {
             const card = parseCard(data.card)
