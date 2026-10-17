@@ -17,6 +17,10 @@ export interface SalePreviewLine {
     unit_price: number
     price_label: string
     total: number
+    /** Ganancia de la línea; `null` si el usuario no puede ver ganancias. */
+    profit: number | null
+    /** Margen % de la línea; `null` si el usuario no puede ver ganancias. */
+    margin: number | null
     note: string | null
 }
 
@@ -29,12 +33,17 @@ export interface SalePreviewCard {
     customer: string
     lines: SalePreviewLine[]
     total: number
+    /** Ganancia y margen del pedido; `null` si el usuario no puede verlos. */
+    profit: number | null
+    margin: number | null
     warnings: string[]
     status: 'pending' | 'superseded' | 'confirmed'
 }
 
 export interface SaleCreatedCard {
     kind: 'sale_created'
+    /** Id de la venta para abrir su visor; `null` en tarjetas antiguas. */
+    sale_id: number | null
     ticket_number: string
     customer: string
     lines: number
@@ -48,6 +57,9 @@ export const CARD_ONLY_TURN = '(Se mostró la vista previa del pedido.)'
 
 const isFiniteNumber = (value: unknown): value is number =>
     typeof value === 'number' && Number.isFinite(value)
+
+/** Ganancia/margen: solo llegan si el usuario puede verlos; si no, `null`. */
+const optionalNumber = (value: unknown): number | null => (isFiniteNumber(value) ? value : null)
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
     value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -74,6 +86,8 @@ const parseLine = (raw: unknown): SalePreviewLine | null => {
         unit_price: line.unit_price,
         price_label: typeof line.price_label === 'string' ? line.price_label : '',
         total: line.total,
+        profit: optionalNumber(line.profit),
+        margin: optionalNumber(line.margin),
         note: typeof line.note === 'string' && line.note.trim().length > 0 ? line.note : null
     }
 }
@@ -94,6 +108,8 @@ export const parseCard = (raw: unknown): AssistantCard | null => {
             customer: data.customer,
             lines: lines as SalePreviewLine[],
             total: data.total,
+            profit: optionalNumber(data.profit),
+            margin: optionalNumber(data.margin),
             warnings: Array.isArray(data.warnings)
                 ? data.warnings.filter((warning): warning is string => typeof warning === 'string')
                 : [],
@@ -114,6 +130,11 @@ export const parseCard = (raw: unknown): AssistantCard | null => {
         }
         return {
             kind: 'sale_created',
+            // Tarjetas guardadas antes de existir el id: no abren el visor.
+            sale_id:
+                isFiniteNumber(data.sale_id) && Number.isInteger(data.sale_id) && data.sale_id > 0
+                    ? data.sale_id
+                    : null,
             ticket_number: data.ticket_number,
             customer: data.customer,
             lines: isFiniteNumber(data.lines) ? data.lines : 0,
@@ -123,6 +144,10 @@ export const parseCard = (raw: unknown): AssistantCard | null => {
 
     return null
 }
+
+/** "51,1%" — margen con un decimal, como el visor de tickets. */
+export const formatMargin = (margin: number): string =>
+    `${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 }).format(margin)}%`
 
 /** Valida una lista guardada; descarta lo que no sirva. */
 export const parseCards = (raw: unknown): AssistantCard[] | undefined =>

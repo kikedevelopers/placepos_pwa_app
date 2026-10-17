@@ -1,7 +1,12 @@
 <script lang="ts">
-    import { CircleCheck, ReceiptText, TriangleAlert, User } from '@lucide/svelte'
+    import { CircleCheck, ReceiptText, TrendingUp, TriangleAlert, User } from '@lucide/svelte'
+    import { ticketViewer } from '$lib/components/TicketViewer'
     import { formatCurrency, formatNumber } from '$lib/utils/numbers'
-    import type { AssistantCard, SalePreviewCard } from '$lib/modules/Place/lib/cards'
+    import {
+        formatMargin,
+        type AssistantCard,
+        type SalePreviewCard
+    } from '$lib/modules/Place/lib/cards'
 
     /**
      * Factura del pedido que preparó Place, dibujada con los datos EXACTOS del
@@ -56,6 +61,14 @@
                                 ? ` · ${line.note}`
                                 : ''}
                         </p>
+                        <!-- Solo llega si el usuario puede ver ganancias. -->
+                        {#if line.profit !== null}
+                            <p class="text-[11px] tabular-nums text-emerald-600">
+                                Ganancia {formatCurrency(line.profit)}{line.margin !== null
+                                    ? ` · Margen ${formatMargin(line.margin)}`
+                                    : ''}
+                            </p>
+                        {/if}
                     </div>
                     <span class="shrink-0 text-[13px] font-medium tabular-nums">{formatCurrency(line.total)}</span>
                 </li>
@@ -69,6 +82,25 @@
             </span>
             <span class="text-[17px] font-semibold tabular-nums">{formatCurrency(card.total)}</span>
         </div>
+
+        {#if card.profit !== null}
+            <div class="mx-3.5 mb-2.5 grid grid-cols-2 gap-2">
+                <div class="rounded-xl border border-emerald-500/25 px-3 py-2" style="background:rgba(16,185,129,0.06)">
+                    <p class="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                        <TrendingUp class="size-3" />Ganancia
+                    </p>
+                    <p class="text-[15px] font-semibold tabular-nums text-emerald-700">
+                        {formatCurrency(card.profit)}
+                    </p>
+                </div>
+                {#if card.margin !== null}
+                    <div class="rounded-xl border border-border/70 bg-muted/40 px-3 py-2">
+                        <p class="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Margen</p>
+                        <p class="text-[15px] font-semibold tabular-nums">{formatMargin(card.margin)}</p>
+                    </div>
+                {/if}
+            </div>
+        {/if}
 
         {#if card.warnings.length > 0}
             <ul class="mx-3.5 mb-2.5 space-y-1 rounded-lg border border-amber-500/25 px-2.5 py-2" style="background:rgba(245,158,11,0.06)">
@@ -96,7 +128,23 @@
     >
         <CircleCheck class="size-5 shrink-0 text-emerald-500" />
         <div class="min-w-0 flex-1 leading-tight">
-            <p class="text-[13px] font-semibold">Pedido {card.ticket_number} creado</p>
+            <p class="text-[13px] font-semibold">
+                Pedido
+                {#if card.sale_id !== null}
+                    <!-- Abre el visor de tickets (el mismo de Ventas). -->
+                    <button
+                        type="button"
+                        title="Ver el pedido"
+                        onclick={() => card.kind === 'sale_created' && card.sale_id !== null && ticketViewer.open(card.sale_id)}
+                        class="rounded text-primary underline decoration-primary/40 underline-offset-2 active:opacity-70"
+                    >
+                        {card.ticket_number}
+                    </button>
+                {:else}
+                    {card.ticket_number}
+                {/if}
+                creado
+            </p>
             <p class="truncate text-[11.5px] text-muted-foreground">
                 {card.customer} · {card.lines}
                 {card.lines === 1 ? 'producto' : 'productos'} · por cobrar en Tickets del POS

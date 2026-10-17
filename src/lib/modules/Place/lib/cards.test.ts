@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCard, parseCards, settledStatus, type SalePreviewCard } from './cards'
+import { formatMargin, parseCard, parseCards, settledStatus, type SalePreviewCard } from './cards'
 import { parseStreamFrame } from './sse'
 
 /**
@@ -29,6 +29,9 @@ describe('parseCard', () => {
         expect(parseCard({ kind: 'sale_preview', data: SUMMARY })).toEqual({
             kind: 'sale_preview',
             ...SUMMARY,
+            lines: [{ ...SUMMARY.lines[0], profit: null, margin: null }],
+            profit: null,
+            margin: null,
             status: 'pending'
         })
     })
@@ -79,18 +82,59 @@ describe('parseCard', () => {
     })
 
     it('una vista previa nueva reemplaza; un pedido creado confirma', () => {
-        expect(settledStatus({ kind: 'sale_preview', ...SUMMARY, status: 'pending' })).toBe(
-            'superseded'
-        )
+        const preview = parseCard({ kind: 'sale_preview', data: SUMMARY }) as SalePreviewCard
+        expect(settledStatus(preview)).toBe('superseded')
         expect(
             settledStatus({
                 kind: 'sale_created',
+                sale_id: 1,
                 ticket_number: 'P',
                 customer: 'M',
                 lines: 1,
                 total: 1
             })
         ).toBe('confirmed')
+    })
+})
+
+describe('ganancia, margen e id del pedido', () => {
+    it('con permiso: ganancia y margen por línea y del pedido', () => {
+        const card = parseCard({
+            kind: 'sale_preview',
+            data: {
+                ...SUMMARY,
+                lines: [{ ...SUMMARY.lines[0], profit: 4600, margin: 51.11 }],
+                profit: 4600,
+                margin: 51.11
+            }
+        }) as SalePreviewCard
+        expect(card.lines[0]).toMatchObject({ profit: 4600, margin: 51.11 })
+        expect(card).toMatchObject({ profit: 4600, margin: 51.11 })
+    })
+
+    it('sin permiso (el servidor no los manda) o inválidos → null, nunca 0', () => {
+        expect(parseCard({ kind: 'sale_preview', data: SUMMARY })).toMatchObject({ profit: null })
+        expect(
+            parseCard({
+                kind: 'sale_preview',
+                data: { ...SUMMARY, profit: 'x', margin: Number.NaN }
+            })
+        ).toMatchObject({ profit: null, margin: null, total: 9000 })
+    })
+
+    it.each([undefined, 0, -3, 1.5, '338150'])('sale_id %p → sin enlace (null)', (sale_id) => {
+        expect(
+            parseCard({
+                kind: 'sale_created',
+                data: { sale_id, ticket_number: 'P', customer: 'M', lines: 1, total: 1 }
+            })
+        ).toMatchObject({ sale_id: null })
+    })
+
+    it('el margen se muestra con un decimal', () => {
+        expect(formatMargin(51.11)).toBe('51,1%')
+        expect(formatMargin(38.9)).toBe('38,9%')
+        expect(formatMargin(40)).toBe('40%')
     })
 })
 
