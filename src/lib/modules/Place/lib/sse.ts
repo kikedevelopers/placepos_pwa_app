@@ -6,6 +6,8 @@
  * heartbeats y JSON corrupto.
  */
 
+import { parseCard, type AssistantCard } from './cards'
+
 export interface SseFrame {
     event: string
     data: string
@@ -46,7 +48,13 @@ export const splitSseFrames = (buffer: string): SseSplitResult => {
 /** Eventos del stream ya tipados. */
 export type AiStreamEvent =
     | { type: 'delta'; text: string }
-    | { type: 'tool'; name: string; label: string; status: 'running' | 'done' | 'error' }
+    | {
+          type: 'tool'
+          name: string
+          label: string
+          status: 'running' | 'done' | 'error'
+      }
+    | { type: 'card'; card: AssistantCard }
     | { type: 'done'; notice?: string }
     | { type: 'error'; message: string }
 
@@ -82,8 +90,15 @@ export const parseStreamFrame = (frame: SseFrame): AiStreamEvent | null => {
                 status
             }
         }
+        case 'card': {
+            const card = parseCard(data.card)
+            return card ? { type: 'card', card } : null
+        }
         case 'done':
-            return { type: 'done', notice: typeof data.notice === 'string' ? data.notice : undefined }
+            return {
+                type: 'done',
+                notice: typeof data.notice === 'string' ? data.notice : undefined
+            }
         case 'error':
             return {
                 type: 'error',

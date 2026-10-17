@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Copy, Check, RotateCcw, Info } from '@lucide/svelte'
     import PlaceMark from './PlaceMark.svelte'
+    import SaleCard from './SaleCard.svelte'
     import { renderMarkdown } from '$lib/modules/Place/lib/markdown'
     import { describeToolIcon } from '$lib/modules/Place/lib/tool-icons'
     import type { ChatMessage } from '$lib/modules/Place/store/chat.svelte'
@@ -16,6 +17,7 @@
     const html = $derived(message.role === 'assistant' ? renderMarkdown(message.content) : '')
     const isEmpty = $derived(message.content.trim().length === 0)
     const runningTools = $derived((message.tools ?? []).filter((t) => t.status !== 'error'))
+    const cards = $derived(message.cards ?? [])
 
     let copied = $state(false)
     function copy() {
@@ -56,6 +58,10 @@
                 </div>
             {/if}
 
+            {#each cards as card, index (`${card.kind}-${index}`)}
+                <SaleCard {card} />
+            {/each}
+
             {#if message.is_error}
                 <div
                     class="rounded-[18px] rounded-tl-[6px] border border-destructive/25 px-3.5 py-2.5 text-[13.5px] leading-relaxed text-destructive"
@@ -63,6 +69,8 @@
                 >
                     {message.content}
                 </div>
+            {:else if isEmpty && cards.length > 0 && !message.is_streaming}
+                <!-- Solo la tarjeta: Place no escribió texto. -->
             {:else if isEmpty && message.is_streaming}
                 <div class="flex items-center gap-1.5 rounded-[18px] rounded-tl-[6px] border border-border/60 bg-card/70 px-4 py-3.5 backdrop-blur-sm">
                     {#each [0, 1, 2] as d (d)}
