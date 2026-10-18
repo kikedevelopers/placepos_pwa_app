@@ -1,4 +1,11 @@
 import { streamAiChat } from '$lib/api/requests/ai'
+import {
+    CARD_ONLY_TURN,
+    parseCards,
+    settledStatus,
+    type AssistantCard
+} from '$lib/modules/Place/lib/cards'
+import type { TimedCredits } from '$lib/modules/Place/lib/credits'
 
 export interface ChatTool {
     name: string
@@ -15,6 +22,8 @@ export interface ChatMessage {
     is_error?: boolean
     tools?: ChatTool[]
     notice?: string
+    /** Tarjetas del servidor (vista previa del pedido / pedido creado). */
+    cards?: AssistantCard[]
 }
 
 const STORAGE_KEY = 'placepos.pwa.ai.chat.v1'
@@ -32,6 +41,8 @@ const uid = (): string =>
 class PlaceChatStore {
     messages = $state<ChatMessage[]>([])
     isStreaming = $state(false)
+    /** Créditos del día según el último mensaje enviado. */
+    credits = $state<TimedCredits | null>(null)
     private controller: AbortController | null = null
     private hydrated = false
 
@@ -46,7 +57,12 @@ class PlaceChatStore {
                 // Nunca rehidratar un mensaje a medio escribir.
                 this.messages = parsed.messages
                     .filter((m) => !m.is_streaming)
-                    .map((m) => ({ ...m, is_streaming: false }))
+                    // Las tarjetas guardadas se revalidan: una corrupta no se pinta.
+                    .map((m) => ({
+                        ...m,
+                        is_streaming: false,
+                        cards: parseCards(m.cards)
+                    }))
             }
         } catch {
             /* localStorage corrupto: arrancamos en limpio */
@@ -94,6 +110,17 @@ class PlaceChatStore {
         void this.runStream()
     }
 
+    /** Agrega la tarjeta y cierra las vistas previas pendientes anteriores. */
+    private applyCard(target: ChatMessage, card: AssistantCard): void {
+        const status = settledStatus(card)
+        for (const message of this.messages) {
+            for (const item of message.cards ?? []) {
+                if (item.kind === 'sale_preview' && item.status === 'pending') item.status = status
+            }
+        }
+        target.cards = [...(target.cards ?? []), card]
+    }
+
     async send(text: string): Promise<void> {
         const content = text.trim()
         if (content.length === 0 || this.isStreaming) return
@@ -113,9 +140,20 @@ class PlaceChatStore {
         this.messages.push(assistant)
         this.isStreaming = true
 
+        // Un turno de Place con solo la tarjeta sigue siendo su turno: sin él,
+        // el "sí" siguiente no respondería a ningún resumen.
         const turns = this.messages
-            .filter((m) => !m.is_streaming && !m.is_error && m.content.trim().length > 0)
-            .map((m) => ({ role: m.role, content: m.content }))
+            .filter((m) => !m.is_streaming && !m.is_error)
+            .map((m) => ({
+                role: m.role,
+                content:
+                    m.content.trim().length === 0 &&
+                    m.role === 'assistant' &&
+                    (m.cards?.length ?? 0) > 0
+                        ? CARD_ONLY_TURN
+                        : m.content
+            }))
+            .filter((turn) => turn.content.trim().length > 0)
 
         this.controller = new AbortController()
 
@@ -125,18 +163,27 @@ class PlaceChatStore {
             onEvent: (event) => {
                 const msg = this.messages[this.messages.length - 1]
                 if (!msg || msg.id !== assistant.id) return
-                if (event.type === 'delta') {
+                if (event.type === 'credits') {
+                    this.credits = { credits: event.credits, at: Date.now() }
+                } else if (event.type === 'card') {
+                    this.applyCard(msg, event.card)
+                } else if (event.type === 'delta') {
                     msg.content += event.text
                 } else if (event.type === 'tool') {
                     const tools = msg.tools ?? []
                     const existing = tools.find((t) => t.name === event.name)
                     if (existing) existing.status = event.status
-                    else tools.push({ name: event.name, label: event.label, status: event.status })
+                    else
+                        tools.push({
+                            name: event.name,
+                            label: event.label,
+                            status: event.status
+                        })
                     msg.tools = tools
                 } else if (event.type === 'done') {
                     msg.is_streaming = false
                     if (event.notice) msg.notice = event.notice
-                    if (msg.content.trim().length === 0 && !event.notice) {
+                    if (msg.content.trim().length === 0 && !event.notice && !msg.cards?.length) {
                         msg.content = 'No recibí respuesta. Intenta de nuevo.'
                         msg.is_error = true
                     }

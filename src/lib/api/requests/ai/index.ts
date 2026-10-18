@@ -2,6 +2,11 @@ import api from '$lib/api/config'
 import { env } from '$lib/constants/env'
 import { getAuthToken } from '$lib/api/storage'
 import { parseStreamFrame, splitSseFrames, type AiStreamEvent } from '$lib/modules/Place/lib/sse'
+import {
+    CREDITS_EXHAUSTED_MESSAGE,
+    parseCredits,
+    type AiCredits
+} from '$lib/modules/Place/lib/credits'
 
 /**
  * Cliente de Place (el asistente) contra pos_api — espejo del de placepos.
@@ -26,6 +31,8 @@ export interface AiStatus {
     defaultModel: string
     models: string[]
     tools: AiToolSummary[]
+    /** Preguntas del día. `null` = servidor sin créditos (no se bloquea nada). */
+    credits: AiCredits | null
 }
 
 const toToolSummary = (value: unknown): AiToolSummary | null => {
@@ -49,7 +56,8 @@ export const getAiStatus = async (): Promise<AiStatus> => {
         models: Array.isArray(payload.models) ? (payload.models as string[]) : [],
         tools: Array.isArray(payload.tools)
             ? payload.tools.map(toToolSummary).filter((t): t is AiToolSummary => t !== null)
-            : []
+            : [],
+        credits: parseCredits(payload.credits)
     }
 }
 
@@ -74,6 +82,26 @@ export interface StreamChatParams {
     turns: Array<{ role: 'user' | 'assistant'; content: string }>
     signal: AbortSignal
     onEvent: (event: AiStreamEvent) => void
+}
+
+/** ¿El 429 es por créditos agotados (y no por ráfaga)? Lee una copia del cuerpo. */
+const readCreditsExhausted = async (
+    response: Response
+): Promise<{ message: string; credits: AiCredits } | null> => {
+    try {
+        const body = (await response.clone().json()) as {
+            payload?: { code?: unknown; details?: { credits?: unknown } }
+        }
+        if (body?.payload?.code !== 'AI_CREDITS_EXHAUSTED') return null
+        const credits = parseCredits(body.payload.details?.credits) ?? {
+            daily_limit: 0,
+            used_today: 0,
+            remaining: 0
+        }
+        return { message: CREDITS_EXHAUSTED_MESSAGE, credits: { ...credits, remaining: 0 } }
+    } catch {
+        return null
+    }
 }
 
 const describeHttpError = async (response: Response): Promise<string> => {
@@ -127,6 +155,13 @@ export const streamAiChat = async ({ turns, signal, onEvent }: StreamChatParams)
     }
 
     if (!response.ok) {
+        // Sin consultas del día: 429 AI_CREDITS_EXHAUSTED (distinto del 429 por ráfaga).
+        const exhausted = response.status === 429 ? await readCreditsExhausted(response) : null
+        if (exhausted) {
+            onEvent({ type: 'credits', credits: exhausted.credits })
+            onEvent({ type: 'error', message: exhausted.message })
+            return
+        }
         onEvent({ type: 'error', message: await describeHttpError(response) })
         return
     }

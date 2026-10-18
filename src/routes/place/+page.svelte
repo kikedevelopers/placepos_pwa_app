@@ -1,9 +1,10 @@
 <script lang="ts">
+    import { canRetryReply } from '$lib/modules/Place/lib/retry'
     import { onDestroy, tick } from 'svelte'
     import { toStore } from 'svelte/store'
     import { goto } from '$app/navigation'
     import { createQuery } from '@tanstack/svelte-query'
-    import { Loader2 } from '@lucide/svelte'
+    import { Hourglass, Loader2 } from '@lucide/svelte'
     import { useProfile } from '$lib/hooks/useProfile'
     import { usePlaceStatus, shouldBlockPlaceRoute } from '$lib/modules/Place/availability'
     import { getAiGreeting } from '$lib/api/requests/ai'
@@ -12,6 +13,12 @@
     import EmptyState from '$lib/modules/Place/components/EmptyState.svelte'
     import MessageBubble from '$lib/modules/Place/components/MessageBubble.svelte'
     import Composer from '$lib/modules/Place/components/Composer.svelte'
+    import {
+        CREDITS_EXHAUSTED_MESSAGE,
+        describeRemaining,
+        isOutOfCredits,
+        latestCredits
+    } from '$lib/modules/Place/lib/credits'
 
     const profileQuery = useProfile()
     const statusQuery = usePlaceStatus()
@@ -26,6 +33,25 @@
     const model = $derived($statusQuery.data?.models?.[0] ?? $statusQuery.data?.defaultModel ?? null)
     const enabled = $derived($statusQuery.data?.enabled)
     const statusLoading = $derived($statusQuery.isLoading)
+
+    // Créditos del día: gana la lectura más reciente (al abrir o al enviar).
+    const credits = $derived(
+        latestCredits(
+            $statusQuery.data?.credits
+                ? { credits: $statusQuery.data.credits, at: $statusQuery.dataUpdatedAt }
+                : null,
+            placeChat.credits
+        )
+    )
+    const outOfCredits = $derived(isOutOfCredits(credits))
+
+    // Sin consultas: se vuelve a preguntar cada 5 min para desbloquear solo
+    // cuando cambie el día o el administrador asigne más.
+    $effect(() => {
+        if (!outOfCredits) return
+        const id = setInterval(() => void $statusQuery.refetch(), 5 * 60 * 1000)
+        return () => clearInterval(id)
+    })
 
     // Gate de navegación: si Place está apagado para la cuenta, fuera de la ruta.
     $effect(() => {
@@ -116,9 +142,10 @@
                     {#each messages as message (message.id)}
                         <MessageBubble
                             {message}
-                            canRetry={!placeChat.isStreaming &&
-                                message.role === 'assistant' &&
-                                message.id === lastAssistantId}
+                            canRetry={canRetryReply(message, {
+                                isStreaming: placeChat.isStreaming,
+                                lastAssistantId
+                            })}
                             onretry={() => placeChat.retryLast()}
                         />
                     {/each}
@@ -126,8 +153,24 @@
             {/if}
         </div>
 
+        {#if outOfCredits}
+            <div class="px-4">
+                <div
+                    role="status"
+                    class="mb-2 flex items-start gap-2.5 rounded-2xl border border-amber-500/30 px-3.5 py-3 text-[12.5px] leading-snug text-amber-800"
+                    style="background:rgba(245,158,11,0.07)"
+                >
+                    <Hourglass size={15} class="mt-px shrink-0" />
+                    <span>{CREDITS_EXHAUSTED_MESSAGE}</span>
+                </div>
+            </div>
+        {/if}
+
         <Composer
             {assistantName}
+            disabled={outOfCredits}
+            disabledPlaceholder={outOfCredits ? 'Sin consultas disponibles por hoy' : undefined}
+            hint={describeRemaining(credits)}
             isStreaming={placeChat.isStreaming}
             {seed}
             onsend={(text) => placeChat.send(text)}

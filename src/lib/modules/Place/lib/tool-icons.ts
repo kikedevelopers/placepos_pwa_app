@@ -9,6 +9,7 @@ import Landmark from '@lucide/svelte/icons/landmark'
 import PackageMinus from '@lucide/svelte/icons/package-minus'
 import PackageSearch from '@lucide/svelte/icons/package-search'
 import ReceiptText from '@lucide/svelte/icons/receipt-text'
+import ShoppingCart from '@lucide/svelte/icons/shopping-cart'
 import TrendingUp from '@lucide/svelte/icons/trending-up'
 import Trophy from '@lucide/svelte/icons/trophy'
 import Truck from '@lucide/svelte/icons/truck'
@@ -34,7 +35,9 @@ export const TOOL_ICONS: Record<string, Component> = {
     get_treasury_accounts: Landmark,
     register_expense: CirclePlus,
     void_expense: Archive,
-    confirm_expense_action: CircleCheck
+    confirm_expense_action: CircleCheck,
+    prepare_sale: ShoppingCart,
+    confirm_sale: CircleCheck
 }
 
 export const describeToolIcon = (name: string): Component => TOOL_ICONS[name] ?? Database
