@@ -73,6 +73,9 @@ export const usePermissions = () => {
         },
         get canViewProductProfit(): boolean {
             return resolved().canViewProductProfit
+        },
+        get canViewProductCost(): boolean {
+            return resolved().canViewProductCost
         }
     }
 }

@@ -156,3 +156,51 @@ describe('buildPermissions · visibilidad financiera (subpermisos del configurad
         })
     })
 })
+
+describe('buildPermissions · costo del producto en el configurador (espejo placepos)', () => {
+    it('owner y superadmin ven el costo siempre', () => {
+        expect(buildPermissions({ type: 'owner', permissions: [] }).canViewProductCost).toBe(true)
+        expect(buildPermissions({ type: 'superadmin', permissions: [] }).canViewProductCost).toBe(
+            true
+        )
+    })
+
+    it.each([
+        [true, true, true],
+        [true, false, true],
+        [false, true, true],
+        [false, false, false]
+    ])(
+        'empleado con margen=%s y ganancia=%s → ve costo: %s',
+        (can_view_product_margin, can_view_product_profit, expected) => {
+            const p = buildPermissions({
+                type: 'employee',
+                permissions: ['canAccessPOS'],
+                can_view_product_margin,
+                can_view_product_profit
+            })
+            expect(p.canViewProductCost).toBe(expected)
+        }
+    )
+
+    it('el permiso general de ganancia NO basta: manda el subpermiso del configurador', () => {
+        const p = buildPermissions({
+            type: 'employee',
+            permissions: ['canAccessPOS'],
+            can_view_profit: true,
+            can_view_product_margin: false,
+            can_view_product_profit: false
+        })
+        expect(p.canViewProductCost).toBe(false)
+    })
+
+    it('empleado sin flags en el perfil (backend viejo): no ve el costo', () => {
+        expect(
+            buildPermissions({ type: 'employee', permissions: ['canAccessPOS'] }).canViewProductCost
+        ).toBe(false)
+    })
+
+    it('sin perfil cargado: no ve el costo', () => {
+        expect(buildPermissions(null).canViewProductCost).toBe(false)
+    })
+})

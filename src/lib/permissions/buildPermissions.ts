@@ -84,6 +84,10 @@ export interface ResolvedPermissions extends Permissions {
     // cada flag. El resto de la app sigue gateado por `canViewProfit`.
     canViewProductMargin: boolean
     canViewProductProfit: boolean
+    // Costo del producto en el configurador del POS. Mismo gate que placepos:
+    // basta CUALQUIERA de los dos subpermisos, porque con el margen o la
+    // ganancia el costo ya se deduce del precio.
+    canViewProductCost: boolean
 }
 
 /**
@@ -128,6 +132,7 @@ export const buildPermissions = (
         canViewCash,
         canViewProductMargin,
         canViewProductProfit,
+        canViewProductCost: canViewProductMargin || canViewProductProfit,
         canAccessDashboard: can('canAccessDashboard'),
         canAccessCustomers: can('canAccessCustomers'),
         canAccessInventory: can('canAccessInventory'),
