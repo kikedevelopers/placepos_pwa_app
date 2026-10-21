@@ -83,16 +83,19 @@ describe('parseCard', () => {
 
     it('una vista previa nueva reemplaza; un pedido creado confirma', () => {
         const preview = parseCard({ kind: 'sale_preview', data: SUMMARY }) as SalePreviewCard
-        expect(settledStatus(preview)).toBe('superseded')
+        expect(settledStatus(preview, preview)).toBe('superseded')
         expect(
-            settledStatus({
-                kind: 'sale_created',
-                sale_id: 1,
-                ticket_number: 'P',
-                customer: 'M',
-                lines: 1,
-                total: 1
-            })
+            settledStatus(
+                {
+                    kind: 'sale_created',
+                    sale_id: 1,
+                    ticket_number: 'P',
+                    customer: 'M',
+                    lines: 1,
+                    total: 1
+                },
+                preview
+            )
         ).toBe('confirmed')
     })
 })

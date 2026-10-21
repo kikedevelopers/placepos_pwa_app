@@ -4,7 +4,7 @@
     import { formatCurrency, formatNumber } from '$lib/utils/numbers'
     import {
         formatMargin,
-        type AssistantCard,
+        type SaleCreatedCard,
         type SalePreviewCard
     } from '$lib/modules/Place/lib/cards'
 
@@ -13,7 +13,7 @@
      * servidor (evento `card`), no con el texto del modelo: lo que el usuario
      * confirma con su "sí" es lo que se crea. Espejo de `SaleCard` de placepos.
      */
-    let { card }: { card: AssistantCard } = $props()
+    let { card }: { card: SalePreviewCard | SaleCreatedCard } = $props()
 
     const STATUS: Record<SalePreviewCard['status'], { label: string; tone: string }> = {
         pending: { label: 'Esperando tu "sí"', tone: 'place-pill-pending' },
