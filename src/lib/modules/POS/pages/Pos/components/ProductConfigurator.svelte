@@ -49,6 +49,8 @@
     const canViewProductMargin = $derived(permissions.canViewProductMargin)
     const canViewProductProfit = $derived(permissions.canViewProductProfit)
     const canViewAnyProfitMetric = $derived(canViewProductMargin || canViewProductProfit)
+    // Costo bajo el stock: mismo gate que placepos (margen o ganancia).
+    const canViewProductCost = $derived(permissions.canViewProductCost)
 
     // --- Estado del cuerpo. Se reinicia cuando cambia el producto (equivalente
     // al remonte por `key={product.id}` de placepos). ---
@@ -245,6 +247,14 @@
                         <p class="text-xs text-muted-foreground">
                             Stock: {formatNumber(product.stock)}
                         </p>
+                        {#if canViewProductCost}
+                            <p class="text-xs text-muted-foreground">
+                                Costo:
+                                <span class="font-semibold text-foreground/80 tabular-nums">
+                                    {formatCurrency(product.cost)}
+                                </span>
+                            </p>
+                        {/if}
                     </div>
                 </div>
 
