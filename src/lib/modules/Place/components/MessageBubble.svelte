@@ -2,6 +2,7 @@
     import { Copy, Check, RotateCcw, Info } from '@lucide/svelte'
     import PlaceMark from './PlaceMark.svelte'
     import SaleCard from './SaleCard.svelte'
+    import TreasuryCard from './TreasuryCard.svelte'
     import { renderMarkdown } from '$lib/modules/Place/lib/markdown'
     import { describeToolIcon } from '$lib/modules/Place/lib/tool-icons'
     import type { ChatMessage } from '$lib/modules/Place/store/chat.svelte'
@@ -59,7 +60,11 @@
             {/if}
 
             {#each cards as card, index (`${card.kind}-${index}`)}
-                <SaleCard {card} />
+                {#if card.kind === 'treasury_preview' || card.kind === 'treasury_done'}
+                    <TreasuryCard {card} />
+                {:else}
+                    <SaleCard {card} />
+                {/if}
             {/each}
 
             {#if message.is_error}

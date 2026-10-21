@@ -1,10 +1,12 @@
 import { streamAiChat } from '$lib/api/requests/ai'
 import {
     CARD_ONLY_TURN,
+    isPreviewCard,
     parseCards,
     settledStatus,
     type AssistantCard
 } from '$lib/modules/Place/lib/cards'
+import { refreshAfterCard } from '$lib/modules/Place/lib/treasury-refresh'
 import type { TimedCredits } from '$lib/modules/Place/lib/credits'
 
 export interface ChatTool {
@@ -112,13 +114,15 @@ class PlaceChatStore {
 
     /** Agrega la tarjeta y cierra las vistas previas pendientes anteriores. */
     private applyCard(target: ChatMessage, card: AssistantCard): void {
-        const status = settledStatus(card)
         for (const message of this.messages) {
             for (const item of message.cards ?? []) {
-                if (item.kind === 'sale_preview' && item.status === 'pending') item.status = status
+                if (!isPreviewCard(item) || item.status !== 'pending') continue
+                const status = settledStatus(card, item)
+                if (status) item.status = status
             }
         }
         target.cards = [...(target.cards ?? []), card]
+        refreshAfterCard(card)
     }
 
     async send(text: string): Promise<void> {
