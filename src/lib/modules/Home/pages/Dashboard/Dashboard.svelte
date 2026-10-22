@@ -1,6 +1,5 @@
 <script lang="ts">
     import FadeInUp from '$lib/components/FadeInUp.svelte'
-    import SectionHeader from './components/SectionHeader.svelte'
     import QuickActions from './components/QuickActions.svelte'
     import MonthGoalCard from './components/MonthGoalCard.svelte'
     import DaySummaryCard from './components/DaySummaryCard.svelte'
@@ -21,25 +20,29 @@
     )
 </script>
 
-<div class="flex flex-1 flex-col gap-6 px-5 pb-8 pt-4">
-    <FadeInUp index={0}>
-        <div>
-            <SectionHeader title="Accesos rápidos" />
-            <QuickActions />
+<!--
+    Móvil: una columna (accesos → meta → sucursales → ventas). Tablet+: los
+    accesos arriba a todo el ancho y debajo dos columnas (meta y sucursales a la
+    izquierda, ventas a la derecha), centradas con un ancho máximo.
+-->
+<div class="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 md:gap-5 md:pt-6">
+    <FadeInUp index={0} class="flex flex-col gap-3">
+        <QuickActions />
+    </FadeInUp>
+
+    <div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-5">
+        <div class="flex min-w-0 flex-col gap-4 md:gap-5">
+            <FadeInUp index={1}>
+                <MonthGoalCard />
+            </FadeInUp>
+            {#if showBranchesSummary}
+                <FadeInUp index={2}>
+                    <BranchesSummaryCard />
+                </FadeInUp>
+            {/if}
         </div>
-    </FadeInUp>
-
-    <FadeInUp index={1}>
-        <MonthGoalCard />
-    </FadeInUp>
-
-    {#if showBranchesSummary}
-        <FadeInUp index={2}>
-            <BranchesSummaryCard />
+        <FadeInUp index={3} class="min-w-0">
+            <DaySummaryCard />
         </FadeInUp>
-    {/if}
-
-    <FadeInUp index={3}>
-        <DaySummaryCard />
-    </FadeInUp>
+    </div>
 </div>

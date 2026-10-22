@@ -1,110 +1,108 @@
 <script lang="ts">
-    import { AlertTriangle, CheckCircle2, Target } from '@lucide/svelte'
+    import { CheckCircle2, Target } from '@lucide/svelte'
     import { formatCurrency } from '$lib/utils/numbers'
     import { getErrorMessage } from '$lib/utils/errors'
-    import Spinner from '$lib/components/Spinner.svelte'
     import { useBreakEvenProgress } from '../hooks/useBreakEvenProgress.svelte'
+    import DashCard from './ui/DashCard.svelte'
+    import CardState from './ui/CardState.svelte'
+    import ProgressBar from './ui/ProgressBar.svelte'
+    import { GOAL_FILL, GOAL_TEXT } from './ui/tones'
     import DailyQuota from './DailyQuota.svelte'
-    import { TONE_FILL, TONE_TEXT } from './goalTones'
-
-    const CARD = 'rounded-2xl border border-border bg-card p-5'
-    const SHADOW = 'box-shadow:0 8px 14px hsla(222,47%,11%,0.05)'
 
     const goal = useBreakEvenProgress()
-
-    const widthPct = $derived(
-        goal.derived ? Math.min(100, Math.max(0, goal.derived.progressPct)) : 0
-    )
 </script>
 
 {#if goal.isLoading}
-    <div class="{CARD} flex min-h-[140px] items-center justify-center" style={SHADOW}>
-        <Spinner />
-    </div>
+    <CardState title="Meta del mes" status="loading" rows={5} />
 {:else if goal.isError}
-    <div class="{CARD} flex items-center gap-3" style={SHADOW}>
-        <AlertTriangle size={18} color="hsl(32, 95%, 44%)" strokeWidth={2} />
-        <p class="flex-1 text-xs leading-4 text-muted-foreground">
-            {getErrorMessage(goal.error) ?? 'No se pudo cargar la meta del mes.'}
-        </p>
-    </div>
+    <CardState
+        title="Meta del mes"
+        status="error"
+        message={getErrorMessage(goal.error) ?? 'No se pudo cargar la meta del mes.'}
+        onRetry={() => goal.refetch()}
+    />
 {:else if !goal.data || !goal.data.configured || !goal.derived}
-    <div class="{CARD} flex items-start gap-3" style={SHADOW}>
-        <div
-            class="flex h-10 w-10 items-center justify-center rounded-xl"
-            style="background-color: hsla(217, 91%, 50%, 0.12)"
-        >
-            <Target size={20} color="hsl(217, 91%, 50%)" strokeWidth={2} />
+    <DashCard title="Meta del mes">
+        <div class="flex items-start gap-3 rounded-2xl border border-dashed border-border p-4">
+            <span class="mt-0.5 shrink-0"><Target size={20} strokeWidth={1.75} color="hsl(var(--primary))" /></span>
+            <div>
+                <p class="text-[14px] font-medium text-foreground">Configura tu punto de equilibrio</p>
+                <p class="mt-1 text-[12.5px] leading-snug text-muted-foreground">
+                    Hazlo desde placepos para ver aquí el avance del mes y la cuota de cada día.
+                </p>
+            </div>
         </div>
-        <div class="flex-1">
-            <p class="text-sm font-semibold text-foreground">Punto de equilibrio sin configurar</p>
-            <p class="mt-0.5 text-xs leading-4 text-muted-foreground">
-                Configura tu punto de equilibrio en placepos para ver el progreso del mes.
-            </p>
-        </div>
-    </div>
+    </DashCard>
 {:else}
     {@const data = goal.data}
-    {@const derived = goal.derived}
-    <div class={CARD} style={SHADOW}>
-        <div class="mb-5 flex items-center gap-2.5">
-            <div
-                class="flex h-9 w-9 items-center justify-center rounded-xl"
-                style="background-color: hsla(217, 91%, 50%, 0.15)"
-            >
-                <Target size={16} color="hsl(217, 91%, 50%)" strokeWidth={2} />
-            </div>
-            <div>
-                <p class="text-sm font-semibold text-foreground">Meta del mes</p>
-                <p class="mt-0.5 text-xs text-muted-foreground">{derived.monthRange}</p>
-            </div>
-        </div>
+    {@const d = goal.derived}
+    {@const showPace = !!d.pace && !d.isReached}
+    <DashCard title="Meta del mes" description={d.monthRange}>
+        {#snippet actions()}
+            <span class="text-[20px] font-semibold leading-none tabular-nums tracking-[-0.02em] {GOAL_TEXT[d.tone]}">
+                {d.progressLabel}
+            </span>
+        {/snippet}
 
-        <div class="mb-3 flex items-end justify-between gap-3">
-            <div class="flex flex-1 items-baseline gap-2">
-                <span class="truncate text-2xl font-bold text-foreground"
-                    >{formatCurrency(data.monthRealProfit)}</span
-                >
-                <span class="truncate text-xs text-muted-foreground"
-                    >de {formatCurrency(data.breakEvenAmount)}</span
-                >
-            </div>
-            <span class="text-lg font-bold {TONE_TEXT[derived.tone]}">{derived.progressLabel}</span>
-        </div>
+        <p class="text-[12.5px] text-muted-foreground">Ganancia real del mes</p>
+        <p class="mt-1 flex flex-wrap items-baseline gap-x-2">
+            <span class="text-[clamp(24px,8vw,32px)] font-semibold leading-none tabular-nums tracking-[-0.03em] text-foreground [overflow-wrap:anywhere]">
+                {formatCurrency(data.monthRealProfit)}
+            </span>
+            <span class="text-[13px] tabular-nums text-muted-foreground">
+                de {formatCurrency(data.breakEvenAmount)}
+            </span>
+        </p>
 
-        <div class="h-3 w-full overflow-hidden rounded-full bg-secondary">
-            <div
-                class="h-full rounded-full transition-[width] duration-500 ease-out-strong"
-                style="width:{widthPct}%;background-color:{TONE_FILL[derived.tone]}"
-            ></div>
-        </div>
+        <ProgressBar
+            class="mt-5 h-2.5"
+            value={d.progressPct / 100}
+            fillClass={GOAL_FILL[d.tone]}
+            marker={showPace ? d.paceShare : undefined}
+            valueText={d.progressLabel}
+            ariaLabel="Avance de la meta del mes"
+        />
 
-        {#if derived.isReached}
-            <div
-                class="mt-3 flex items-center gap-2 rounded-lg px-3 py-2"
-                style="background-color:hsla(158,64%,38%,0.10);border:1px solid hsla(158,64%,38%,0.30)"
-            >
-                <CheckCircle2 size={16} color="hsl(158, 64%, 38%)" strokeWidth={2} />
-                <span class="flex-1 text-xs font-semibold text-success">
-                    Meta superada · Excedente {formatCurrency(derived.surplus)}
-                </span>
-            </div>
-        {:else}
-            <p class="mt-3 text-xs text-muted-foreground">
-                Faltan <span class="font-semibold text-foreground"
-                    >{formatCurrency(derived.deficit)}</span
-                > para alcanzar la meta del mes.
-            </p>
-        {/if}
+        <div class="mt-3 space-y-1.5 text-[12.5px]">
+            {#if d.isReached}
+                <p class="flex items-center gap-1.5 font-medium text-success">
+                    <CheckCircle2 size={15} strokeWidth={2} />
+                    Meta superada · {formatCurrency(d.surplus)} por encima
+                </p>
+            {:else}
+                <p class="flex items-baseline justify-between gap-3 text-muted-foreground">
+                    <span>Faltan para la meta</span>
+                    <span class="shrink-0 font-semibold tabular-nums text-foreground">
+                        {formatCurrency(d.deficit)}
+                    </span>
+                </p>
+            {/if}
+            {#if showPace && d.pace}
+                <p class="flex items-baseline justify-between gap-3 text-muted-foreground">
+                    <span class="flex min-w-0 items-center gap-2">
+                        <span aria-hidden="true" class="h-3 w-0.5 shrink-0 rounded-full bg-foreground/70"></span>
+                        <span class="whitespace-nowrap">
+                            Ritmo esperado
+                            <span class="hidden tabular-nums min-[400px]:inline">
+                                · día {d.pace.elapsed_days} de {d.pace.days_in_month}
+                            </span>
+                        </span>
+                    </span>
+                    <span class="shrink-0 font-medium tabular-nums text-foreground">
+                        {formatCurrency(d.expectedToDate)}
+                    </span>
+                </p>
+            {/if}
+        </div>
 
         <DailyQuota
             dailyTarget={data.dailyTarget}
             dayRealProfit={data.dayRealProfit}
-            tone={derived.dayTone}
-            progressPct={derived.dayProgressPct}
-            deficit={derived.dayDeficit}
-            surplus={derived.daySurplus}
-            isReached={derived.dayIsReached}
+            tone={d.dayTone}
+            progressPct={d.dayProgressPct}
+            deficit={d.dayDeficit}
+            surplus={d.daySurplus}
+            isReached={d.dayIsReached}
         />
-    </div>
+    </DashCard>
 {/if}
