@@ -2,7 +2,6 @@
     import { goto } from '$app/navigation'
     import { BarChart3, Boxes, Landmark, LayoutGrid, Truck, Users, Wallet } from '@lucide/svelte'
     import type { IconComponent } from '$lib/types/icon'
-    import ActionTile from './ActionTile.svelte'
     import { usePlaceStatus } from '$lib/modules/Place/availability'
     import PlaceButton from '$lib/modules/Place/components/PlaceButton.svelte'
 
@@ -24,13 +23,31 @@
 </script>
 
 {#if placeEnabled}
-    <div class="mb-2.5">
-        <PlaceButton {assistantName} onclick={() => goto('/place')} />
-    </div>
+    <PlaceButton {assistantName} onclick={() => goto('/place')} />
 {/if}
 
-<div class="grid grid-cols-4 gap-2.5">
-    {#each ACTIONS as action (action.label)}
-        <ActionTile icon={action.icon} label={action.label} onclick={() => goto(action.route)} />
-    {/each}
-</div>
+<!--
+    Accesos como en la pantalla de inicio de un teléfono: una sola superficie con
+    iconos, sin una tarjeta por acción.
+-->
+<nav aria-label="Accesos rápidos" class="dash-card rounded-[22px] border border-border/70 bg-card px-2 py-3">
+    <ul class="grid grid-cols-4 gap-y-2 md:grid-cols-7">
+        {#each ACTIONS as action (action.label)}
+            {@const Icon = action.icon}
+            <li>
+                <button
+                    type="button"
+                    onclick={() => goto(action.route)}
+                    class="group flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 py-2 outline-none transition-transform duration-150 ease-out-strong active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring/60"
+                >
+                    <span
+                        class="flex h-11 w-11 items-center justify-center rounded-[14px] bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary/15"
+                    >
+                        <Icon size={20} strokeWidth={1.9} />
+                    </span>
+                    <span class="max-w-full truncate text-[11.5px] font-medium text-foreground">{action.label}</span>
+                </button>
+            </li>
+        {/each}
+    </ul>
+</nav>

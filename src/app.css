@@ -90,6 +90,31 @@
     }
 }
 
+/* Dashboard: tarjetas con sombra de caída real (no halo) y relleno de barras
+   que escala en X desde 0 al montarse. `--fill` es 0..1. */
+@layer components {
+    .dash-card {
+        box-shadow:
+            0 1px 2px 0 hsl(222 47% 11% / 0.04),
+            0 14px 32px -20px hsl(222 47% 11% / 0.16);
+    }
+    .dark .dash-card {
+        box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.04);
+    }
+    /* Excepción documentada a "UI < 300ms": es el llenado de un dato, no una
+       respuesta a un gesto; 450ms deja leer el avance sin hacer esperar. */
+    .dash-bar-fill {
+        transform-origin: left center;
+        transform: scaleX(var(--fill, 0));
+        transition: transform 450ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    @starting-style {
+        .dash-bar-fill {
+            transform: scaleX(0);
+        }
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

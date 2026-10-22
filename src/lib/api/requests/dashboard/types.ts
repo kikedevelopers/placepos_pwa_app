@@ -46,7 +46,7 @@ export type TodaySummary = {
      * sumado dentro de `totalSales` y su ganancia dentro de `salesProfit`. No
      * entra a caja (`totalCollected`).
      */
-    ordersTotal: number
+    ordersTotal?: number
     // Vista VENTAS del día (DEVENGADO): la venta a CRÉDITO cuenta como venta del
     // día por su valor íntegro. Alimenta el "Resumen de ventas del día" y las
     // tarjetas de Finanzas. NO tocan la caja (totalCollected/profit/surplus/
@@ -61,7 +61,7 @@ export type TodaySummary = {
     expenses: number
     realProfit: number // CAJA
     salesCount: number
-    newCredits: {
+    newCredits?: {
         count: number
         total: number
         // Ganancia DEVENGADA de los créditos del día (discriminada).
