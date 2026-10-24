@@ -2,7 +2,14 @@ import { z } from 'zod'
 import { formatLocalYmd } from '$lib/modules/Expenses/utils/localDate'
 
 /** Valores válidos de periodicidad (espejo de FixedExpensePeriodUnit). */
-export const PERIOD_UNIT_VALUES = ['hour', 'day', 'week', 'month'] as const
+export const PERIOD_UNIT_VALUES = ['hour', 'day', 'week', 'month', 'semimonthly', 'end_of_month'] as const
+
+/**
+ * Las convenciones de calendario ignoran la cantidad (siempre 1), igual que
+ * placepos y los backends.
+ */
+export const normalizePeriodQuantity = (unit: (typeof PERIOD_UNIT_VALUES)[number], quantity: number): number =>
+    unit === 'semimonthly' || unit === 'end_of_month' ? 1 : quantity
 
 /**
  * Esquema del formulario de gasto fijo. Paridad con placepos:

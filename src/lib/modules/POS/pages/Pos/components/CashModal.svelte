@@ -80,7 +80,7 @@
         <!-- Header -->
         <div
             class="flex items-center justify-between border-b border-border/70 bg-card px-3 py-2"
-            style="padding-top:max(env(safe-area-inset-top),0.5rem)"
+            style="padding-top:max(var(--app-safe-top),0.5rem)"
         >
             <button
                 type="button"

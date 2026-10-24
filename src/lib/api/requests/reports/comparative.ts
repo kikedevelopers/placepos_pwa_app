@@ -68,3 +68,42 @@ export const getComparativeReport = async (
     })
     return response.data.payload
 }
+
+// ---- Comparativa por día (GET /pos-reports/comparative/by-day) ----
+// El MISMO día del mes en el mes de referencia y los anteriores (paridad placepos).
+
+export interface ComparativeDayParams {
+    /** Hoy (YYYY-MM-DD): ancla el mes "actual". */
+    reference: string
+    /** Día del mes a comparar (1..31). */
+    day: number
+    count: 2 | 3
+}
+
+export interface ComparativeDayPeriod {
+    label: string
+    /** Fecha real usada (YYYY-MM-DD), ajustada si el mes era más corto. */
+    date: string
+    requestedDay: number
+    /** true si el mes no tenía ese día y se usó el último. */
+    clamped: boolean
+    sales: number
+    cost: number
+    profit: number
+    margin: number
+    growth: ComparativeGrowth | null
+}
+
+export interface ComparativeDayResult {
+    reference: string
+    day: number
+    count: number
+    periods: ComparativeDayPeriod[]
+}
+
+export const getComparativeDayReport = async (params: ComparativeDayParams): Promise<ComparativeDayResult> => {
+    const response = await api.get<ApiPayload<ComparativeDayResult>>('/pos-reports/comparative/by-day', {
+        params
+    })
+    return response.data.payload
+}

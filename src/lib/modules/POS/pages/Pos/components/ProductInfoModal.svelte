@@ -206,7 +206,7 @@
                 type="button"
                 onclick={() => (zoomOpen = false)}
                 class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white active:opacity-70"
-                style="top: calc(env(safe-area-inset-top) + 12px)"
+                style="top: calc(var(--app-safe-top) + 12px)"
                 aria-label="Cerrar imagen"
             >
                 <X size={22} />

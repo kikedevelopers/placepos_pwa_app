@@ -1,7 +1,6 @@
 <script lang="ts">
     import { getErrorMessage } from '$lib/utils/errors'
-    import FilterChips from '$lib/components/FilterChips.svelte'
-    import ScreenState from '$lib/components/ScreenState.svelte'
+    import { EmptyState, Segmented, SkeletonList } from '$lib/components/premium'
     import SectionHeader from './SectionHeader.svelte'
     import CompanyForm from './CompanyForm.svelte'
     import AdminInfoForm from './AdminInfoForm.svelte'
@@ -14,24 +13,24 @@
     const company = $derived($query.data ?? null)
 
     const TABS = [
-        { id: 'info', label: 'Información' },
-        { id: 'admin', label: 'Administrativa' },
-        { id: 'consecutivos', label: 'Consecutivos' }
+        { value: 'info', label: 'Información' },
+        { value: 'admin', label: 'Administrativa' },
+        { value: 'consecutivos', label: 'Consecutivos' }
     ] as const
     let tab = $state<'info' | 'admin' | 'consecutivos'>('info')
 </script>
 
 <SectionHeader title="Mi negocio" subtitle="Datos y configuración del negocio" {onBack} />
 
-<div class="flex flex-col gap-5 px-5 pb-8">
-    <FilterChips options={TABS} value={tab} onChange={(v) => (tab = v as typeof tab)} />
+<div class="flex flex-col gap-5 px-5 pb-6">
+    <Segmented ariaLabel="Sección de Mi negocio" options={TABS} value={tab} onChange={(v) => (tab = v)} />
 
     {#if tab === 'consecutivos'}
         <ConsecutivosList />
     {:else if $query.isLoading}
-        <ScreenState kind="loading" />
+        <SkeletonList rows={4} />
     {:else if $query.isError || !company}
-        <ScreenState kind="error" message={getErrorMessage($query.error)} />
+        <EmptyState kind="error" title="No se pudo cargar" message={getErrorMessage($query.error)} />
     {:else if tab === 'info'}
         <CompanyForm {company} />
     {:else}

@@ -6,7 +6,8 @@ import { formatLocalYmd, parseLocalYmd } from '$lib/modules/Expenses/utils/local
 import {
     buildDefaultValues,
     fixedExpenseSchema,
-    type FixedExpenseFormData
+    type FixedExpenseFormData,
+    normalizePeriodQuantity
 } from '../schemas/fixedExpense.schema'
 import { useFixedExpenseMutations } from './useFixedExpenseMutations'
 
@@ -74,7 +75,7 @@ export function useFixedExpenseForm(expense: FixedExpense | null, onSuccess: () 
                         description: data.description.trim() || null,
                         amount: data.amount,
                         period_unit: data.period_unit,
-                        period_quantity: data.period_quantity,
+                        period_quantity: normalizePeriodQuantity(data.period_unit, data.period_quantity),
                         start_date: parseLocalYmd(data.start_date).toISOString()
                     }
                 },
@@ -87,7 +88,7 @@ export function useFixedExpenseForm(expense: FixedExpense | null, onSuccess: () 
                     description: data.description?.trim() || null,
                     amount: data.amount,
                     period_unit: data.period_unit,
-                    period_quantity: data.period_quantity,
+                    period_quantity: normalizePeriodQuantity(data.period_unit, data.period_quantity),
                     start_date: parseLocalYmd(data.start_date).toISOString()
                 },
                 handlers

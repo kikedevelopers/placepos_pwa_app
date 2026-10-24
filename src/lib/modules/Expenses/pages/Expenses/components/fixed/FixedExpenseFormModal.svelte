@@ -5,7 +5,7 @@
     import FormField from '$lib/components/FormField.svelte'
     import MoneyInput from '$lib/components/MoneyInput.svelte'
     import PrimaryButton from '$lib/components/PrimaryButton.svelte'
-    import { PERIOD_UNIT_OPTIONS } from '$lib/modules/Expenses/constants/periodicity'
+    import { PERIOD_UNIT_META, PERIOD_UNIT_OPTIONS } from '$lib/modules/Expenses/constants/periodicity'
     import { useFixedExpenseForm } from '../../hooks/useFixedExpenseForm.svelte'
 
     interface Props {
@@ -21,6 +21,9 @@
 
     const BORDER = 'hsla(214, 32%, 89%, 0.9)'
 
+    // Quincenal / Mensual de calendario: la cantidad no aplica (siempre 1).
+    const isCalendarPeriod = $derived(Boolean(PERIOD_UNIT_META[ctrl.form.period_unit]?.isCalendar))
+
     const onQtyInput = (e: Event) => {
         const raw = (e.currentTarget as HTMLInputElement).value.replace(/[^\d]/g, '')
         ctrl.form.period_quantity = raw ? Number(raw) : 0
@@ -29,7 +32,7 @@
 
 <div class="fixed inset-0 z-50 flex flex-col bg-background motion-safe:animate-slide-up">
     <!-- Header -->
-    <div class="border-b border-border/70 bg-card pt-[env(safe-area-inset-top)]">
+    <div class="border-b border-border/70 bg-card pt-[var(--app-safe-top)]">
         <div class="flex items-center justify-between px-3 py-2">
             <button
                 type="button"
@@ -73,7 +76,8 @@
                 >
                     Periodicidad
                 </span>
-                <div class="grid grid-cols-[88px_1fr] gap-2">
+                <div class="grid {isCalendarPeriod ? 'grid-cols-1' : 'grid-cols-[88px_1fr]'} gap-2">
+                    {#if !isCalendarPeriod}
                     <div
                         class="flex h-[52px] items-center rounded-[14px] px-3.5"
                         style="border:1.5px solid {BORDER};background-color:hsla(0,0%,100%,0.7)"
@@ -86,6 +90,7 @@
                             class="w-full bg-transparent text-base text-foreground outline-none placeholder:text-[hsl(215,16%,62%)]"
                         />
                     </div>
+                    {/if}
                     <div
                         class="flex h-[52px] items-center rounded-[14px] px-2"
                         style="border:1.5px solid {BORDER};background-color:hsla(0,0%,100%,0.7)"
@@ -95,13 +100,15 @@
                             class="w-full bg-transparent px-1.5 text-base text-foreground outline-none"
                         >
                             {#each PERIOD_UNIT_OPTIONS as opt (opt.value)}
-                                <option value={opt.value}>{opt.plural}</option>
+                                <option value={opt.value}>{opt.isCalendar ? opt.label : opt.plural}</option>
                             {/each}
                         </select>
                     </div>
                 </div>
                 <p class="mt-1.5 ml-0.5 text-xs text-muted-foreground">
-                    Cuánto dura un periodo del gasto (ej. cada 1 mes, cada 15 días, cada 8 horas).
+                    {isCalendarPeriod
+                        ? 'El monto se causa en cada corte del calendario (Quincenal: día 15 y último día; Mensual: último día del mes).'
+                        : 'Cuánto dura un periodo del gasto (ej. cada 1 mes, cada 15 días, cada 8 horas).'}
                 </p>
                 {#if ctrl.errors.period_quantity || ctrl.errors.period_unit}
                     <p class="mt-1.5 ml-0.5 text-xs text-destructive">

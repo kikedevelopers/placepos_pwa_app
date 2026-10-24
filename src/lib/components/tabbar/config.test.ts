@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildPermissions } from '$lib/permissions/buildPermissions'
-import { filterTabs } from './config'
+import { filterTabs, isTabActive } from './config'
 
 const tabRoutes = (tabs: { route: string }[]) => tabs.map((t) => t.route)
 
@@ -74,5 +74,26 @@ describe('filterTabs', () => {
         const v = filterTabs(can)
         expect(tabRoutes(v.left)).toEqual([])
         expect(v.showPos).toBe(true)
+    })
+})
+
+describe('isTabActive', () => {
+    const inicio = { match: '/' }
+    const reportes = { match: '/reportes' }
+
+    it('Inicio solo en la raíz exacta', () => {
+        expect(isTabActive(inicio, '/')).toBe(true)
+        expect(isTabActive(inicio, '/reportes')).toBe(false)
+    })
+
+    it('las demás también en sus subrutas', () => {
+        expect(isTabActive(reportes, '/reportes')).toBe(true)
+        expect(isTabActive(reportes, '/reportes/ventas')).toBe(true)
+        expect(isTabActive(reportes, '/reportes/')).toBe(true)
+    })
+
+    it('no confunde rutas que solo comparten prefijo', () => {
+        expect(isTabActive(reportes, '/reportesx')).toBe(false)
+        expect(isTabActive({ match: '/inventario' }, '/inventario-viejo')).toBe(false)
     })
 })

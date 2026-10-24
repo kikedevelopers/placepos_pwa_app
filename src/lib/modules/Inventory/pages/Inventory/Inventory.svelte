@@ -1,17 +1,17 @@
 <script lang="ts">
-    import { AlertTriangle, Boxes, Plus, Wallet } from '@lucide/svelte'
+    import { Boxes, Plus } from '@lucide/svelte'
     import type { Product } from '$lib/api/requests/products'
     import { getErrorMessage } from '$lib/utils/errors'
     import { formatCompactCurrency } from '$lib/utils/numbers'
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
-    import ScreenState from '$lib/components/ScreenState.svelte'
-    import StatTile from '$lib/components/StatTile.svelte'
+    import { EmptyState, Metrics, Segmented, SkeletonList } from '$lib/components/premium'
     import VirtualList from '$lib/components/VirtualList.svelte'
     import { useProducts } from './hooks/useProducts'
     import { computeInventoryStats } from './utils/inventoryStats'
-    import ProductCard from './components/ProductCard.svelte'
+    import ProductRow from './components/ProductRow.svelte'
+    import { INVENTORY_FILTERS, filterInventory, type InventoryFilter } from './utils/inventoryList'
     import ProductFormModal from './components/ProductFormModal.svelte'
     import PresentationFormModal from './components/PresentationFormModal.svelte'
     import CreateMenuSheet from './components/CreateMenuSheet.svelte'
@@ -32,17 +32,8 @@
     let editingPresentation = $state<Product | null>(null)
 
     const data = $derived($query.data)
-    const filtered = $derived.by(() => {
-        const list = data ?? []
-        const q = debounced.value.trim().toLowerCase()
-        if (!q) return list
-        return list.filter(
-            (p) =>
-                p.name.toLowerCase().includes(q) ||
-                (p.sku_code ?? '').toLowerCase().includes(q) ||
-                (p.bar_code ?? '').toLowerCase().includes(q)
-        )
-    })
+    let filter = $state<InventoryFilter>('all')
+    const filtered = $derived(filterInventory(data ?? [], debounced.value, filter))
     const stats = $derived.by(() => computeInventoryStats(data ?? []))
 
     const createProduct = () => {
@@ -70,82 +61,76 @@
     }
 </script>
 
-<!-- Alto acotado al viewport: el header (buscador + stats) queda fijo y SOLO la
-     lista scrollea, virtualizada, para no congelar el render con cientos de
-     tarjetas. -->
-<div class="flex min-h-0 flex-1 flex-col px-5 pt-4">
-    <div class="flex shrink-0 flex-col gap-4 pb-3">
-        <div class="flex gap-3">
-            <div class="flex-1">
-                <SearchField
-                    bind:value={search}
-                    placeholder="Buscar por nombre, SKU o código de barras"
-                />
+<!--
+    Vista de scroll PROPIO (lista virtualizada): `.dock-bleed` hace que llegue
+    hasta el borde inferior y la lista reserva el alto del dock dentro de su
+    scroll (tailSpace). Arriba, búsqueda + cifras + filtros quedan fijos.
+-->
+<div class="dock-bleed flex min-h-0 flex-1 flex-col">
+    <div class="flex shrink-0 flex-col gap-3 px-5 pb-3 pt-5">
+        <div class="flex items-center gap-2.5">
+            <div class="min-w-0 flex-1">
+                <SearchField bind:value={search} placeholder="Nombre, SKU o código de barras" />
             </div>
             {#if role.canManage}
                 <button
                     type="button"
                     onclick={() => (menuOpen = true)}
-                    aria-label="Crear"
-                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary transition-transform active:scale-[0.97]"
+                    aria-label="Crear producto o presentación"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_14px_-6px_hsl(var(--primary)/0.7)] transition-transform duration-150 ease-out active:scale-[0.92]"
                 >
-                    <Plus size={22} color="white" strokeWidth={2.5} />
+                    <Plus size={20} strokeWidth={2.5} />
                 </button>
             {/if}
         </div>
 
         {#if data}
-            <div class="flex gap-3">
-                <StatTile
-                    icon={Boxes}
-                    label="Productos"
-                    value={String(stats.count)}
-                    bg="hsla(217, 91%, 50%, 0.12)"
-                    fg="hsl(217, 91%, 50%)"
-                />
-                <StatTile
-                    icon={Wallet}
-                    label="Valorización"
-                    value={formatCompactCurrency(stats.valuation)}
-                    bg="hsla(158, 64%, 38%, 0.12)"
-                    fg="hsl(158, 64%, 38%)"
-                />
-                <StatTile
-                    icon={AlertTriangle}
-                    label="Sin existencias"
-                    value={String(stats.outOfStock)}
-                    bg="hsla(0, 84%, 55%, 0.12)"
-                    fg="hsl(0, 84%, 55%)"
-                />
-            </div>
-        {/if}
-
-        {#if $query.isLoading}
-            <ScreenState kind="loading" />
-        {:else if $query.isError}
-            <ScreenState kind="error" message={getErrorMessage($query.error)} />
-        {:else if data && filtered.length === 0}
-            <ScreenState
-                kind="empty"
-                message={search
-                    ? 'Sin resultados para tu búsqueda.'
-                    : 'Aún no hay productos. Crea el primero.'}
+            <Metrics
+                ariaLabel="Resumen del inventario"
+                columns={3}
+                items={[
+                    { label: 'Productos', text: stats.count.toLocaleString('es-CO') },
+                    { label: 'Valorización', text: formatCompactCurrency(stats.valuation) },
+                    { label: 'Agotados', text: stats.outOfStock.toLocaleString('es-CO'), tone: stats.outOfStock > 0 ? 'negative' : 'neutral' }
+                ]}
             />
+            <Segmented ariaLabel="Filtrar inventario" options={INVENTORY_FILTERS} value={filter} onChange={(v) => (filter = v)} />
         {/if}
     </div>
 
-    {#if data && filtered.length > 0}
+    {#if $query.isLoading}
+        <div class="px-5"><SkeletonList rows={7} /></div>
+    {:else if $query.isError}
+        <EmptyState kind="error" title="No se pudo cargar el inventario" message={getErrorMessage($query.error)} />
+    {:else if data && filtered.length === 0}
+        <EmptyState
+            icon={Boxes}
+            title={debounced.value ? 'Sin resultados' : filter === 'out' ? 'Nada agotado' : 'Sin productos'}
+            message={debounced.value
+                ? 'Prueba con otro nombre, SKU o código.'
+                : filter === 'out'
+                  ? 'Todos los productos tienen existencias.'
+                  : 'Crea el primero con el botón +.'}
+        />
+    {:else if data}
+        <p class="shrink-0 px-6 pb-2 text-[12.5px] text-muted-foreground">
+            {filtered.length.toLocaleString('es-CO')} {filtered.length === 1 ? 'resultado' : 'resultados'}
+        </p>
         <VirtualList
             items={filtered}
             getKey={(product) => product.id}
-            estimateHeight={132}
-            gap={12}
-            padEnd={32}
-            resetKey={debounced.value}
-            class="-mx-5 flex-1 px-5"
+            estimateHeight={72}
+            resetKey={`${debounced.value}|${filter}`}
+            tailSpace="calc(var(--dock-space) + 8px)"
+            class="min-h-0 flex-1 px-5"
         >
-            {#snippet children(product)}
-                <ProductCard {product} onclick={() => openEdit(product)} />
+            {#snippet children(product, index)}
+                <ProductRow
+                    {product}
+                    first={index === 0}
+                    last={index === filtered.length - 1}
+                    onclick={role.canManage ? () => openEdit(product) : undefined}
+                />
             {/snippet}
         </VirtualList>
     {/if}

@@ -5,6 +5,7 @@ import type {
     CreditsReportResponse,
     CreditStatus,
     DailyClosure,
+    SalesByHour,
     SalesReportResponse
 } from './types'
 
@@ -49,6 +50,13 @@ export const getCreditsReport = async (
 
 export const getDailyClosure = async (date?: string): Promise<DailyClosure> => {
     const response = await api.get<ApiPayload<DailyClosure>>('/reports/daily-closure', {
+        params: date ? { date } : undefined
+    })
+    return response.data.payload
+}
+
+export const getSalesByHour = async (date?: string): Promise<SalesByHour> => {
+    const response = await api.get<ApiPayload<SalesByHour>>('/reports/sales-by-hour', {
         params: date ? { date } : undefined
     })
     return response.data.payload

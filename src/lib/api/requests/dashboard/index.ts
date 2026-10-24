@@ -10,8 +10,11 @@ import type {
     TodaySummary
 } from './types'
 
-export const getTodaySummary = async (): Promise<TodaySummary> => {
-    const response = await api.get<GetTodaySummaryResponse>('/dashboard/today')
+/** Resumen del día (hoy por defecto; `date` YYYY-MM-DD para otro día). */
+export const getTodaySummary = async (date?: string): Promise<TodaySummary> => {
+    const response = await api.get<GetTodaySummaryResponse>('/dashboard/today', {
+        params: date ? { date } : undefined
+    })
     return response.data.payload
 }
 

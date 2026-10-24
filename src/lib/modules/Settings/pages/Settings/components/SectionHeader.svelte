@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { ArrowLeft } from '@lucide/svelte'
+    import { ChevronLeft } from '@lucide/svelte'
 
+    /** Cabecera de una sección de Configuración: "‹ Configuración" + título grande. */
     interface Props {
         title: string
         subtitle?: string
@@ -9,19 +10,17 @@
     let { title, subtitle, onBack }: Props = $props()
 </script>
 
-<header class="flex items-center gap-2 px-3 pb-3 pt-4">
+<header class="flex flex-col gap-1 px-5 pb-4 pt-3">
     <button
         type="button"
         onclick={onBack}
-        aria-label="Volver"
-        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-opacity active:opacity-60"
+        class="-ml-1.5 flex w-fit items-center gap-0.5 rounded-full py-1 pr-2 text-[15px] font-medium text-primary transition-opacity active:opacity-60"
     >
-        <ArrowLeft size={22} color="hsl(215, 16%, 40%)" strokeWidth={2.2} />
+        <ChevronLeft size={20} strokeWidth={2.4} />
+        Configuración
     </button>
-    <div class="min-w-0">
-        <h1 class="truncate text-xl font-bold tracking-tight text-foreground">{title}</h1>
-        {#if subtitle}
-            <p class="truncate text-xs text-muted-foreground">{subtitle}</p>
-        {/if}
-    </div>
+    <h1 class="truncate text-[26px] font-bold leading-tight tracking-[-0.03em] text-foreground">{title}</h1>
+    {#if subtitle}
+        <p class="truncate text-[13px] text-muted-foreground">{subtitle}</p>
+    {/if}
 </header>

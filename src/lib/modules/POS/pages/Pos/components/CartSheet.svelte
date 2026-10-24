@@ -32,7 +32,7 @@
 {#if visible}
     <div
         class="fixed inset-0 z-50 flex flex-col bg-background"
-        style="padding-top: env(safe-area-inset-top);"
+        style="padding-top: var(--app-safe-top);"
     >
         {#if view === 'customer'}
             <CustomerSelectorView

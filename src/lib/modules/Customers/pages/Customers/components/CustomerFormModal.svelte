@@ -19,7 +19,7 @@
 
 <div class="fixed inset-0 z-50 flex flex-col bg-background motion-safe:animate-slide-up">
     <!-- Header -->
-    <div class="border-b border-border/70 bg-card pt-[env(safe-area-inset-top)]">
+    <div class="border-b border-border/70 bg-card pt-[var(--app-safe-top)]">
         <div class="flex items-center justify-between px-3 py-2">
             <button
                 type="button"

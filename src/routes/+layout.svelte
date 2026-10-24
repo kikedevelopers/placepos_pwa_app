@@ -6,6 +6,7 @@
     import { Toaster } from 'svelte-sonner'
     import { queryClient } from '$lib/api/queryClient'
     import AuthGate from '$lib/components/AuthGate.svelte'
+    import StatusBarBackdrop from '$lib/components/StatusBarBackdrop.svelte'
     import { useRealtimeInvalidation } from '$lib/realtime/useRealtimeInvalidation.svelte'
 
     let { children }: { children: Snippet } = $props()
@@ -26,6 +27,9 @@
         }
     })
 </script>
+
+<!-- Color detrás del reloj/batería en TODAS las pantallas (ver statusBar.ts). -->
+<StatusBarBackdrop />
 
 <QueryClientProvider client={queryClient}>
     <AuthGate>

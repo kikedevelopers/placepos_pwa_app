@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { portal } from '$lib/actions/portal'
     import type { Snippet } from 'svelte'
 
     /**
@@ -18,11 +19,11 @@
 </script>
 
 {#if open}
-    <div class="fixed inset-0 z-50 flex flex-col justify-end">
+    <div use:portal class="fixed inset-0 z-50 flex flex-col justify-end" role="dialog" aria-modal="true" aria-label={title}>
         <button
             type="button"
             aria-label="Cerrar"
-            class="absolute inset-0 bg-black/40"
+            class="absolute inset-0 bg-[rgba(9,14,28,0.38)] motion-safe:animate-fade-in"
             onclick={onClose}
         ></button>
 
@@ -34,11 +35,11 @@
             pantalla.
         -->
         <div
-            class="relative flex max-h-[85dvh] w-full flex-col rounded-t-3xl bg-card px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+16px)] motion-safe:animate-slide-up"
+            class="relative flex max-h-[88dvh] w-full flex-col rounded-t-[28px] bg-card px-5 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+16px)] shadow-[0_-12px_40px_-12px_rgba(9,14,28,0.25)] motion-safe:animate-slide-up"
         >
-            <div class="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-border"></div>
+            <div class="mx-auto mb-3 h-[5px] w-9 shrink-0 rounded-full bg-foreground/15"></div>
             {#if title}
-                <h3 class="mb-3 shrink-0 text-base font-bold text-foreground">{title}</h3>
+                <h3 class="mb-4 shrink-0 text-[19px] font-semibold tracking-[-0.02em] text-foreground">{title}</h3>
             {/if}
 
             <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -46,7 +47,7 @@
             </div>
 
             {#if footer}
-                <div class="mt-4 shrink-0">
+                <div class="mt-5 shrink-0">
                     {@render footer()}
                 </div>
             {/if}

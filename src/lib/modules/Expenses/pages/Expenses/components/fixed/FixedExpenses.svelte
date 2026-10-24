@@ -3,7 +3,7 @@
     import type { FixedExpense } from '$lib/api/requests/fixedExpenses'
     import { getErrorMessage } from '$lib/utils/errors'
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
-    import ScreenState from '$lib/components/ScreenState.svelte'
+    import { ConfirmSheet, EmptyState, SkeletonList } from '$lib/components/premium'
     import { useFixedExpenses } from '../../hooks/useFixedExpenses'
     import { useLiveTick } from '../../hooks/useLiveTick.svelte'
     import { useFixedExpensesSummary } from '../../hooks/useFixedExpensesSummary.svelte'
@@ -43,23 +43,30 @@
         formOpen = true
     }
 
+    let toArchive = $state<FixedExpense | null>(null)
+    let archiveError = $state<string | null>(null)
+
     const handleArchive = (expense: FixedExpense) => {
         if (!role.canManage) return
-        const ok =
-            typeof window !== 'undefined' &&
-            window.confirm(
-                `Al archivar "${expense.name}" se detiene su acumulación. Podrás verlo en el historial. ¿Continuar?`
-            )
-        if (!ok) return
-        $archive.mutate(expense.id)
+        archiveError = null
+        toArchive = expense
+    }
+    const confirmArchive = () => {
+        if (!toArchive) return
+        $archive.mutate(toArchive.id, {
+            onSuccess: () => (toArchive = null),
+            onError: (error: unknown) => {
+                archiveError = getErrorMessage(error) ?? 'No se pudo archivar. Inténtalo de nuevo.'
+            }
+        })
     }
 </script>
 
-<div class="flex flex-1 flex-col gap-4">
+<div class="flex flex-col gap-4">
     {#if $query.isLoading}
-        <ScreenState kind="loading" />
+        <SkeletonList rows={3} />
     {:else if $query.isError}
-        <ScreenState kind="error" message={getErrorMessage($query.error)} />
+        <EmptyState kind="error" title="No se pudieron cargar" message={getErrorMessage($query.error)} />
     {:else if expenses.length === 0}
         <FixedExpensesEmpty canManage={role.canManage} onCreate={openCreate} />
     {:else}
@@ -69,15 +76,14 @@
             <button
                 type="button"
                 onclick={openCreate}
-                class="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-                style="background:linear-gradient(135deg, hsl(258,90%,62%), hsl(340,82%,60%));box-shadow:0 10px 20px hsla(258,90%,55%,0.28)"
+                class="surface flex h-[52px] w-full items-center justify-center gap-2 text-[15px] font-semibold text-primary transition-transform duration-150 ease-out active:scale-[0.98]"
             >
-                <Plus size={18} color="white" strokeWidth={2.4} />
+                <Plus size={18} strokeWidth={2.4} />
                 Nuevo gasto fijo
             </button>
         {/if}
 
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-3">
             {#each expenses as expense (expense.id)}
                 <FixedExpenseCard
                     {expense}
@@ -91,6 +97,18 @@
         </div>
     {/if}
 </div>
+
+<ConfirmSheet
+    open={toArchive !== null}
+    title="Archivar gasto fijo"
+    message={toArchive ? `Al archivar "${toArchive.name}" se detiene su acumulación. Podrás verlo en el historial.` : ''}
+    confirmLabel="Archivar"
+    destructive
+    loading={$archive.isPending}
+    error={archiveError}
+    onConfirm={confirmArchive}
+    onClose={() => (toArchive = null)}
+/>
 
 {#if formOpen}
     {#key editing?.id ?? 'new'}

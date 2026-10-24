@@ -12,10 +12,26 @@
             name="viewport"
             content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
         />
-        <meta name="theme-color" content="#1e7df0" />
+        <meta name="theme-color" content="#1867d8" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <!-- `black-translucent`: iOS deja que la app se dibuje detrás del reloj y
+             la batería (como una app nativa a pantalla completa). Con este modo
+             la hora es SIEMPRE blanca: detrás va el azul de STATUS_BAR_COLOR
+             (franja StatusBarBackdrop + header). Ver lib/theme/statusBar.ts. -->
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <!-- iOS instalado → clase `ios-standalone` en <html> ANTES de pintar.
+             Doble señal: `display-mode: standalone` y `navigator.standalone`
+             (la propia de iOS, también válida en accesos directos antiguos).
+             Las correcciones de alto/área segura de app.css cuelgan de ella. -->
+        <script>
+            ;(function () {
+                var ua = navigator.userAgent
+                var isIOS = /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+                var standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches
+                if (isIOS && standalone) document.documentElement.classList.add('ios-standalone')
+            })()
+        </script>
         %sveltekit.head%
     </head>
     <body data-sveltekit-preload-data="hover">

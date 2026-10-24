@@ -1,7 +1,6 @@
 <script lang="ts">
     import { goto } from '$app/navigation'
-    import { BarChart3, Boxes, Landmark, LayoutGrid, Truck, Users, Wallet } from '@lucide/svelte'
-    import type { IconComponent } from '$lib/types/icon'
+    import { QUICK_ACTIONS as ACTIONS } from '../quickActions'
     import { usePlaceStatus } from '$lib/modules/Place/availability'
     import PlaceButton from '$lib/modules/Place/components/PlaceButton.svelte'
 
@@ -11,15 +10,6 @@
     const placeEnabled = $derived($placeStatus.data?.enabled === true)
     const assistantName = $derived($placeStatus.data?.assistantName?.trim() || 'Place')
 
-    const ACTIONS: { label: string; icon: IconComponent; route: string }[] = [
-        { label: 'Reportes', icon: BarChart3, route: '/reportes' },
-        { label: 'Clientes', icon: Users, route: '/clientes' },
-        { label: 'Inventario', icon: Boxes, route: '/inventario' },
-        { label: 'Compras', icon: Truck, route: '/compras' },
-        { label: 'Billeteras', icon: Wallet, route: '/billeteras' },
-        { label: 'Bancos', icon: Landmark, route: '/bancos' },
-        { label: 'Catálogo', icon: LayoutGrid, route: '/catalogo' }
-    ]
 </script>
 
 {#if placeEnabled}
@@ -31,7 +21,7 @@
     iconos, sin una tarjeta por acción.
 -->
 <nav aria-label="Accesos rápidos" class="dash-card rounded-[22px] border border-border/70 bg-card px-2 py-3">
-    <ul class="grid grid-cols-4 gap-y-2 md:grid-cols-7">
+    <ul class="grid grid-cols-3 gap-y-2 md:grid-cols-6">
         {#each ACTIONS as action (action.label)}
             {@const Icon = action.icon}
             <li>

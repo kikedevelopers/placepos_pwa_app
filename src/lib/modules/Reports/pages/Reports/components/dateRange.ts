@@ -1,4 +1,5 @@
 import { todayISO } from '$lib/utils/dates'
+import { formatDayMonth, parseDateKey } from '$lib/utils/calendarNames'
 
 /**
  * Sistema de rango de fechas para Informes. Presets de paridad con placepos
@@ -69,3 +70,9 @@ export const makeRange = (mode: RangeMode): DateRangeValue => {
 
 export const rangeLabel = (v: DateRangeValue): string =>
     v.mode === 'custom' ? 'Personalizado' : (RANGE_PRESETS.find((p) => p.id === v.mode)?.label ?? 'Rango')
+
+const shortDay = (key: string): string => formatDayMonth(parseDateKey(key))
+
+/** Rango legible: "24 oct" (un día) o "1 oct – 24 oct". */
+export const rangeCaption = (v: Pick<DateRangeValue, 'from' | 'to'>): string =>
+    v.from === v.to ? shortDay(v.from) : `${shortDay(v.from)} – ${shortDay(v.to)}`

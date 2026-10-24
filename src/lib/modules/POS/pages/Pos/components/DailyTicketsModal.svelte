@@ -37,7 +37,7 @@
 {#if visible}
     <div
         class="fixed inset-0 z-50 flex flex-col"
-        style="padding-top:env(safe-area-inset-top); background-color: hsl(214, 22%, 95%)"
+        style="padding-top:var(--app-safe-top); background-color: hsl(214, 22%, 95%)"
         role="dialog"
         aria-modal="true"
         aria-label="Tickets del día"

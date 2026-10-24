@@ -1,203 +1,166 @@
 <script lang="ts">
-    import { CalendarRange, Plus, Receipt, Wallet } from '@lucide/svelte'
+    import { CalendarDays, Plus, Receipt, X } from '@lucide/svelte'
     import type { ExpenseListParams, ExpenseRecord } from '$lib/api/requests/expenses'
     import { getErrorMessage } from '$lib/utils/errors'
-    import { formatCurrency } from '$lib/utils/numbers'
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
-    import ScreenState from '$lib/components/ScreenState.svelte'
+    import { ConfirmSheet, EmptyState, Hero, ProgressiveList, Skeleton, SkeletonList, ToolbarChip, groupByDay, plural } from '$lib/components/premium'
+    import DateRangeSheet from '$lib/modules/Reports/pages/Reports/components/DateRangeSheet.svelte'
+    import { makeRange, rangeCaption, type DateRangeValue } from '$lib/modules/Reports/pages/Reports/components/dateRange'
+    import { formatCurrency } from '$lib/utils/numbers'
     import { useExpenses } from '../../hooks/useExpenses'
     import { useExpensePaymentMethods } from '../../hooks/useExpensePaymentMethods'
     import { useExpenseMutations } from '../../hooks/useExpenseMutations'
-    import ExpenseCard from './ExpenseCard.svelte'
+    import { expenseInstant } from '../../utils/expenseRows'
+    import ExpenseRow from './ExpenseRow.svelte'
     import ExpenseFormModal from './ExpenseFormModal.svelte'
-
-    // Sin props: el componente es autocontenido (lo monta el tab container de
-    // Gastos sin pasarle nada). Si en el futuro hiciera falta inyectar filtros
-    // iniciales, se añadirían como props opcionales sin romper el montaje.
 
     const role = useUserRole()
 
     let search = $state('')
-    let dateFrom = $state('')
-    let dateTo = $state('')
+    // Sin rango = todos los gastos (como antes); el chip abre el selector de periodo.
+    let range = $state<DateRangeValue | null>(null)
+    let rangeOpen = $state(false)
     const debouncedSearch = useDebouncedValue(() => search, 250)
 
-    // Params reactivos: el getter alimenta el queryKey de useExpenses, así que la
-    // lista refetchea al cambiar búsqueda (debounced) o rango de fechas.
     const params = $derived<ExpenseListParams>({
         search: debouncedSearch.value.trim() || undefined,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined
+        date_from: range?.from,
+        date_to: range?.to
     })
 
     const query = useExpenses(() => params)
     const methodsQuery = useExpensePaymentMethods()
     const { void: voidMutation } = useExpenseMutations()
-    const voidStore = $derived($voidMutation)
 
     let formOpen = $state(false)
+    let toVoid = $state<ExpenseRecord | null>(null)
+    let voidError = $state<string | null>(null)
 
     const data = $derived($query.data)
     const expenses = $derived(data?.expenses ?? [])
-    const totalAmount = $derived(data?.totalAmount ?? 0)
-    const activeCount = $derived(data?.activeCount ?? 0)
     const hasFilters = $derived(Boolean(params.search || params.date_from || params.date_to))
+    const groups = $derived(groupByDay(expenses, expenseInstant))
 
-    const openCreate = () => {
-        formOpen = true
+    const askVoid = (expense: ExpenseRecord) => {
+        voidError = null
+        toVoid = expense
     }
-
-    const handleVoid = (expense: ExpenseRecord) => {
-        if (!role.canVoid) return
-        const ok =
-            typeof window !== 'undefined' &&
-            window.confirm(
-                '¿Anular este gasto? Se revertirá el balance de la fuente. Esta acción no se puede deshacer.'
-            )
-        if (!ok) return
-        voidStore.mutate(expense.id, {
+    const confirmVoid = () => {
+        if (!toVoid) return
+        $voidMutation.mutate(toVoid.id, {
+            onSuccess: () => (toVoid = null),
             onError: (error: unknown) => {
-                const message =
-                    getErrorMessage(error) ?? 'No se pudo anular el gasto. Inténtalo de nuevo.'
-                if (typeof window !== 'undefined') window.alert(message)
+                voidError = getErrorMessage(error) ?? 'No se pudo anular el gasto. Inténtalo de nuevo.'
             }
         })
     }
 </script>
 
-<div class="flex flex-1 flex-col gap-3 px-5 pb-8 pt-4">
-    <!-- Buscador + botón nuevo gasto -->
-    <div class="flex gap-3">
-        <div class="flex-1">
+<div class="flex flex-col gap-4">
+    <div class="flex items-center gap-2.5">
+        <div class="min-w-0 flex-1">
             <SearchField bind:value={search} placeholder="Buscar por descripción" />
         </div>
         {#if role.canManage}
             <button
                 type="button"
-                onclick={openCreate}
+                onclick={() => (formOpen = true)}
                 aria-label="Nuevo gasto"
-                class="flex h-11 w-11 items-center justify-center rounded-xl transition-transform active:scale-[0.97]"
-                style="background:linear-gradient(135deg, hsl(0,84%,60%), hsl(0,72%,51%))"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_14px_-6px_hsl(var(--primary)/0.7)] transition-transform duration-150 ease-out active:scale-[0.92]"
             >
-                <Plus size={22} color="white" strokeWidth={2.5} />
+                <Plus size={20} strokeWidth={2.5} />
             </button>
         {/if}
     </div>
 
-    <!-- KPIs premium: Total en gastos / Registros activos (overlay radial) -->
-    <div class="grid grid-cols-2 gap-3">
-        <div
-            class="relative overflow-hidden rounded-2xl border border-border bg-card p-4"
-            style="box-shadow:0 6px 14px hsla(222,47%,11%,0.05)"
-        >
-            <div
-                class="pointer-events-none absolute inset-0"
-                style="background:radial-gradient(120% 120% at 0% 0%, hsla(0,84%,60%,0.18), transparent 60%)"
-            ></div>
-            <div class="relative flex items-start justify-between gap-2">
-                <div class="min-w-0 flex-1">
-                    <p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Total en gastos
-                    </p>
-                    <p
-                        class="mt-1.5 truncate text-lg font-bold tabular-nums text-foreground"
-                        title={formatCurrency(totalAmount)}
-                    >
-                        {formatCurrency(totalAmount, 0)}
-                    </p>
-                </div>
-                <div
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-                    style="background-color:hsla(0,0%,100%,0.65);backdrop-filter:blur(4px)"
-                >
-                    <Receipt size={16} color="hsl(0, 84%, 55%)" strokeWidth={2} />
-                </div>
-            </div>
-        </div>
-
-        <div
-            class="relative overflow-hidden rounded-2xl border border-border bg-card p-4"
-            style="box-shadow:0 6px 14px hsla(222,47%,11%,0.05)"
-        >
-            <div
-                class="pointer-events-none absolute inset-0"
-                style="background:radial-gradient(120% 120% at 0% 0%, hsla(217,91%,55%,0.18), transparent 60%)"
-            ></div>
-            <div class="relative flex items-start justify-between gap-2">
-                <div class="min-w-0 flex-1">
-                    <p class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Registros activos
-                    </p>
-                    <p class="mt-1.5 truncate text-lg font-bold tabular-nums text-foreground">
-                        {activeCount}
-                    </p>
-                </div>
-                <div
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-                    style="background-color:hsla(0,0%,100%,0.65);backdrop-filter:blur(4px)"
-                >
-                    <Wallet size={16} color="hsl(217, 91%, 50%)" strokeWidth={2} />
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Rango de fechas -->
-    <div class="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2">
-        <CalendarRange size={16} color="hsl(215, 16%, 55%)" strokeWidth={2} />
-        <input
-            type="date"
-            bind:value={dateFrom}
-            aria-label="Desde"
-            class="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none"
+    <div class="flex items-center gap-2">
+        <ToolbarChip
+            icon={CalendarDays}
+            label={range ? rangeCaption(range) : 'Todas las fechas'}
+            active={range !== null}
+            onclick={() => (rangeOpen = true)}
+            ariaLabel="Filtrar por fechas"
         />
-        <span class="text-xs text-muted-foreground">—</span>
-        <input
-            type="date"
-            bind:value={dateTo}
-            aria-label="Hasta"
-            class="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none"
-        />
-        {#if dateFrom || dateTo}
+        {#if range}
             <button
                 type="button"
-                onclick={() => {
-                    dateFrom = ''
-                    dateTo = ''
-                }}
-                class="text-[11px] font-semibold text-primary transition-opacity active:opacity-60"
+                onclick={() => (range = null)}
+                aria-label="Quitar filtro de fechas"
+                class="flex h-9 w-9 items-center justify-center rounded-full bg-foreground/[0.06] text-muted-foreground transition-transform active:scale-[0.92]"
             >
-                Limpiar
+                <X size={15} strokeWidth={2.4} />
             </button>
         {/if}
     </div>
 
-    <!-- Estado / lista -->
     {#if $query.isLoading}
-        <ScreenState kind="loading" />
+        <div class="surface px-5 pb-5 pt-[18px]">
+            <Skeleton class="h-3.5 w-28" />
+            <Skeleton class="mt-3 h-9 w-44" />
+        </div>
+        <SkeletonList rows={6} />
     {:else if $query.isError}
-        <ScreenState kind="error" message={getErrorMessage($query.error)} />
-    {:else if expenses.length === 0}
-        <ScreenState
-            kind="empty"
-            message={hasFilters
-                ? 'Sin gastos para los filtros aplicados.'
-                : 'Aún no hay gastos registrados. Crea el primero.'}
-        />
+        <EmptyState kind="error" title="No se pudieron cargar los gastos" message={getErrorMessage($query.error)} />
     {:else}
-        {#each expenses as expense (expense.id)}
-            <ExpenseCard
-                {expense}
-                canVoid={role.canVoid}
-                voiding={voidStore.isPending}
-                onVoid={handleVoid}
+        <Hero
+            label="Total en gastos"
+            amount={data?.totalAmount ?? 0}
+            caption={`${plural(data?.activeCount ?? 0, 'registro activo', 'registros activos')}${range ? ` · ${rangeCaption(range)}` : ''}`}
+        />
+
+        {#if expenses.length === 0}
+            <EmptyState
+                icon={Receipt}
+                title={hasFilters ? 'Sin resultados' : 'Aún no hay gastos'}
+                message={hasFilters ? 'No hay gastos para la búsqueda o el periodo elegido.' : 'Registra el primero con el botón +.'}
             />
-        {/each}
+        {:else}
+            <ProgressiveList items={groups} step={8} resetKey={JSON.stringify(params)}>
+                {#snippet children(shown)}
+                    <div class="flex flex-col gap-4">
+                        {#each shown as group (group.key)}
+                            <section aria-label={group.label}>
+                                <h3 class="mb-1.5 px-1 text-[13px] font-semibold text-muted-foreground">{group.label}</h3>
+                                <div class="surface group-rows overflow-hidden">
+                                    {#each group.items as expense (expense.id)}
+                                        <ExpenseRow
+                                            {expense}
+                                            onclick={role.canVoid && !expense.is_archived ? () => askVoid(expense) : undefined}
+                                        />
+                                    {/each}
+                                </div>
+                            </section>
+                        {/each}
+                    </div>
+                {/snippet}
+            </ProgressiveList>
+        {/if}
     {/if}
 </div>
 
 {#if formOpen}
     <ExpenseFormModal methods={$methodsQuery.data} onClose={() => (formOpen = false)} />
 {/if}
+
+<DateRangeSheet
+    open={rangeOpen}
+    value={range ?? makeRange('month')}
+    onClose={() => (rangeOpen = false)}
+    onApply={(v) => (range = v)}
+/>
+
+<ConfirmSheet
+    open={toVoid !== null}
+    title="Anular gasto"
+    message={toVoid
+        ? `"${toVoid.description}" por ${formatCurrency(toVoid.amount)}. Se devolverá el dinero a la fuente de donde salió. No se puede deshacer.`
+        : ''}
+    confirmLabel="Anular gasto"
+    destructive
+    loading={$voidMutation.isPending}
+    error={voidError}
+    onConfirm={confirmVoid}
+    onClose={() => (toVoid = null)}
+/>

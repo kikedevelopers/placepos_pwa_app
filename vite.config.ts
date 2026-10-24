@@ -14,7 +14,7 @@ export default defineConfig({
                 name: 'PlacePOS',
                 short_name: 'PlacePOS',
                 description: 'Punto de venta — versión web (PWA)',
-                theme_color: '#1e7df0',
+                theme_color: '#1867d8',
                 background_color: '#f5f8fc',
                 display: 'standalone',
                 orientation: 'portrait',
@@ -31,8 +31,16 @@ export default defineConfig({
                     }
                 ]
             },
+            // En desarrollo también se sirve el manifest. Sin él, iOS 26 instala
+            // el ícono como acceso directo antiguo (no como web app): ignora
+            // black-translucent, deja franjas del sistema arriba y abajo y no
+            // activa `display-mode: standalone`. Probar desde el teléfono contra
+            // el servidor de desarrollo exige el manifest. El service worker no
+            // se registra en dev (el layout pide /sw.js, que solo existe en el
+            // build), así que no interfiere con la recarga en caliente.
             devOptions: {
-                enabled: false
+                enabled: true,
+                type: 'module'
             }
         })
     ],

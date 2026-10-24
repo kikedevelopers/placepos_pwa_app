@@ -101,7 +101,7 @@
     onDestroy(() => placeChat.stop())
 </script>
 
-<div class="relative flex h-[100dvh] flex-col overflow-hidden bg-background">
+<div class="relative flex h-[var(--app-height)] flex-col overflow-hidden bg-background">
     <!-- Luz de ambiente superior. -->
     <div
         aria-hidden="true"

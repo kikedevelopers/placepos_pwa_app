@@ -56,15 +56,25 @@
     <SplashScreen />
 {:else}
     <!--
-        App-shell de altura fija = viewport (h-[100dvh]) con scroll SOLO en <main>.
-        Así el header queda anclado arriba y el AppTabBar siempre fijo al fondo del
-        viewport, sin importar cuánto crezca el contenido (incluido scroll infinito).
-        `overflow-hidden` en el shell evita que el body scrollee; `min-h-0` en main
-        es imprescindible para que el área scrolleable pueda encogerse en flexbox.
+        App-shell de altura fija = pantalla (var(--app-height), ver app.css: 100dvh, o
+        100lvh en iOS instalado por WebKit 301108) con scroll SOLO en <main>.
+        - Header azul arriba, dibujado detrás de la barra de estado del móvil.
+        - <main> es una hoja clara que sube sobre el header (esquinas redondeadas)
+          y es lo único que scrollea.
+        - El dock flota ENCIMA del contenido (absolute): `.app-main` reserva abajo
+          su alto (--dock-space, app.css); las vistas con scroll propio usan
+          `.dock-bleed` y lo reservan dentro de su lista.
+        - <main> NO lleva z-index: un z-index lo volvería contexto de apilamiento
+          y todo sheet abierto desde una vista quedaría DEBAJO del dock (z-40)
+          aunque declare z-50 (bug: el botón "Aplicar" del rango de fechas
+          tapado). Como va después del header en el DOM, igual se pinta encima.
+        `min-h-0` en main es imprescindible para que pueda encogerse en flexbox.
     -->
-    <div class="flex h-[100dvh] flex-col overflow-hidden bg-background">
+    <div class="relative flex h-[var(--app-height)] flex-col overflow-hidden bg-background">
         <AppHeader />
-        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        <main
+            class="app-main relative -mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-t-[26px] bg-background"
+        >
             {@render children()}
         </main>
         <AppTabBar />
