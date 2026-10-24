@@ -112,21 +112,18 @@
     }
 
     /*
-     * iOS INSTALADO (pantalla de inicio). WebKit 301108 (iOS 26): con
-     * black-translucent el viewport queda MÁS CORTO que la pantalla mientras la
-     * página sea más baja que ella → franjas del sistema arriba y abajo y el
-     * contenido cortado antes del borde. Si la página mide al menos la pantalla
-     * (100lvh), iOS le da el área completa.
-     * La clase `ios-standalone` la pone un script en app.html (iOS + instalado);
-     * Android y el navegador no se tocan.
+     * iOS INSTALADO (pantalla de inicio). WebKit 301108 (iOS 26): mientras la
+     * página mida MENOS que la pantalla, el viewport queda más corto (franja
+     * del sistema abajo). Se le da a <html> un alto mínimo con TOPE (fórmula de
+     * frappe-ui): `100lvh` solo NO sirve, porque iOS 26 reporta 100lvh como la
+     * pantalla completa aunque el área visible sea menor (WebKit 316008) — con
+     * eso el shell sobremedía y el dock quedaba cortado abajo en producción.
+     * Los shells de pantalla completa son `fixed inset-0`: miden exactamente el
+     * área visible que iOS entrega, sin depender de unidades vh.
+     * La clase `ios-standalone` la pone un script en app.html (iOS + instalado).
      */
     html.ios-standalone {
-        --app-height: 100lvh;
-        min-height: 100lvh;
-    }
-
-    html.ios-standalone body {
-        min-height: 100lvh;
+        min-height: min(100lvh, calc(100% + env(safe-area-inset-top)));
     }
 
     /* App responsive (mobile-first): el shell ocupa todo el viewport. El

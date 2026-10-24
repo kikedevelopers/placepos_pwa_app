@@ -25,6 +25,18 @@ describe('layout de la app: dock flotante y sheets', () => {
         expect(header.slice(header.indexOf('</header>'))).toContain('<SettingsSheet')
     })
 
+    it('los shells de pantalla completa son fixed inset-0 (miden el área visible real, sin vh)', () => {
+        expect(/<main\s[^>]*>/s.test(layout)).toBe(true)
+        expect(layout).toContain('<div class="fixed inset-0 flex flex-col overflow-hidden bg-background">')
+        expect(read('routes', 'place', '+page.svelte')).toContain('<div class="fixed inset-0 flex flex-col')
+        expect(read('lib', 'modules', 'POS', 'pages', 'Pos', 'Pos.svelte')).toContain('<div class="fixed inset-0 flex flex-col')
+        const code = (src: string) => src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\/.*$/gm, '')
+        for (const shell of [layout, read('routes', 'place', '+page.svelte'), read('lib', 'modules', 'POS', 'pages', 'Pos', 'Pos.svelte')].map(code)) {
+            expect(shell).not.toMatch(/h-\[var\(--app-height\)\]/)
+            expect(shell).not.toMatch(/100lvh/)
+        }
+    })
+
     it('el dock va por debajo de los sheets', () => {
         const dock = read('lib', 'components', 'tabbar', 'FloatingDock.svelte')
         const sheet = read('lib', 'components', 'BottomSheet.svelte')

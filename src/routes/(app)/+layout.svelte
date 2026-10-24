@@ -56,8 +56,9 @@
     <SplashScreen />
 {:else}
     <!--
-        App-shell de altura fija = pantalla (var(--app-height), ver app.css: 100dvh, o
-        100lvh en iOS instalado por WebKit 301108) con scroll SOLO en <main>.
+        App-shell `fixed inset-0` = exactamente el área visible (sin unidades vh:
+        iOS 26 instalado reporta 100lvh mayor que lo visible y el dock quedaba
+        cortado; ver app.css) con scroll SOLO en <main>.
         - Header azul arriba, dibujado detrás de la barra de estado del móvil.
         - <main> es una hoja clara que sube sobre el header (esquinas redondeadas)
           y es lo único que scrollea.
@@ -70,7 +71,7 @@
           tapado). Como va después del header en el DOM, igual se pinta encima.
         `min-h-0` en main es imprescindible para que pueda encogerse en flexbox.
     -->
-    <div class="relative flex h-[var(--app-height)] flex-col overflow-hidden bg-background">
+    <div class="fixed inset-0 flex flex-col overflow-hidden bg-background">
         <AppHeader />
         <main
             class="app-main relative -mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain rounded-t-[26px] bg-background"
