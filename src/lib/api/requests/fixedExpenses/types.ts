@@ -2,8 +2,12 @@
 // `company_id` NUNCA viaja en payloads — se resuelve del JWT. Amounts son
 // numeric(15,2) serializados a number; fechas a ISO string.
 
-/** Unidad de periodicidad del gasto fijo. Espejo `FixedExpensePeriodUnit`. */
-export type FixedExpensePeriodUnit = 'hour' | 'day' | 'week' | 'month'
+/**
+ * Unidad de periodicidad del gasto fijo. Espejo `FixedExpensePeriodUnit`:
+ * intervalo fijo (hour/day/week/month = 30 días) o calendario
+ * (semimonthly = día 15 y último del mes; end_of_month = último día del mes).
+ */
+export type FixedExpensePeriodUnit = 'hour' | 'day' | 'week' | 'month' | 'semimonthly' | 'end_of_month'
 
 /** Estado de un corte (period). Espejo `FixedExpensePeriodStatus`. */
 export type FixedExpensePeriodStatus = 'PENDING' | 'PAID'

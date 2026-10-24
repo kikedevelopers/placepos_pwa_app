@@ -95,12 +95,17 @@ const config: Config = {
                 'slide-up': {
                     from: { transform: 'translateY(100%)' },
                     to: { transform: 'translateY(0)' }
+                },
+                'fade-in': {
+                    from: { opacity: '0' },
+                    to: { opacity: '1' }
                 }
             },
             animation: {
                 'fade-in-up': 'fade-in-up 300ms cubic-bezier(0.23, 1, 0.32, 1)',
                 'scale-in': 'scale-in 200ms cubic-bezier(0.23, 1, 0.32, 1)',
-                'slide-up': 'slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1)'
+                'slide-up': 'slide-up 340ms cubic-bezier(0.32, 0.72, 0, 1)',
+                'fade-in': 'fade-in 240ms cubic-bezier(0.23, 1, 0.32, 1)'
             }
         }
     },

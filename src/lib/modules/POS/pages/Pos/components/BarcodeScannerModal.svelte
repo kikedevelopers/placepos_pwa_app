@@ -185,7 +185,7 @@
         <!-- Header -->
         <div
             class="flex flex-row items-center justify-between px-3 pb-2"
-            style="padding-top: calc(env(safe-area-inset-top) + 6px)"
+            style="padding-top: calc(var(--app-safe-top) + 6px)"
         >
             <button
                 type="button"

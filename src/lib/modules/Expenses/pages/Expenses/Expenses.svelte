@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { Receipt, CalendarClock } from '@lucide/svelte'
     import { page } from '$app/state'
     import { goto } from '$app/navigation'
     import { browser } from '$app/environment'
-    import FadeInUp from '$lib/components/FadeInUp.svelte'
+    import { Segmented } from '$lib/components/premium'
     import {
         DEFAULT_EXPENSES_TAB,
         EXPENSES_TAB_FIXED,
@@ -34,14 +33,10 @@
         rawTab === EXPENSES_TAB_FIXED && !canFixed ? EXPENSES_TAB_VARIABLE : rawTab
     )
 
-    const TABS = $derived<{ id: ExpensesTab; label: string; icon: typeof Receipt }[]>(
-        [
-            { id: EXPENSES_TAB_VARIABLE, label: 'Variables', icon: Receipt },
-            ...(canFixed
-                ? [{ id: EXPENSES_TAB_FIXED, label: 'Fijos', icon: CalendarClock }]
-                : [])
-        ]
-    )
+    const TABS = $derived<{ id: ExpensesTab; label: string }[]>([
+        { id: EXPENSES_TAB_VARIABLE, label: 'Variables' },
+        ...(canFixed ? [{ id: EXPENSES_TAB_FIXED, label: 'Fijos' }] : [])
+    ])
 
     const selectTab = (next: ExpensesTab) => {
         if (next === activeTab || !browser) return
@@ -51,56 +46,26 @@
     }
 </script>
 
-<div class="flex flex-1 flex-col">
-    <!-- Header premium: título + subtítulo sobre fondo con halo radial sutil -->
-    <header class="relative overflow-hidden px-5 pb-4 pt-5">
-        <div
-            class="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full opacity-60 blur-2xl"
-            style="background: radial-gradient(circle, hsla(0,84%,60%,0.16), transparent 70%)"
-            aria-hidden="true"
-        ></div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground">Gastos</h1>
-        <p class="mt-0.5 text-sm text-muted-foreground">
-            Controla los egresos del negocio en un único lugar
-        </p>
-    </header>
+<div class="flex flex-1 flex-col gap-4 px-5 pb-6 pt-5">
+    <h1 class="text-[26px] font-bold leading-tight tracking-[-0.03em] text-foreground">Gastos</h1>
 
-    <!-- Segmented control móvil (thumb deslizante, iconos), no tabs de escritorio.
-         Sólo se muestra si hay más de una sección disponible (RBAC). -->
+    <!-- Variables / Fijos solo si el rol ve las dos secciones. -->
     {#if TABS.length > 1}
-    <div class="px-5 pb-2">
-        <div
-            class="flex rounded-2xl bg-secondary p-1 shadow-[inset_0_1px_2px_hsla(222,47%,11%,0.04)]"
-            role="tablist"
-            aria-label="Tipo de gasto"
-        >
-            {#each TABS as t (t.id)}
-                {@const active = t.id === activeTab}
-                <button
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onclick={() => selectTab(t.id)}
-                    class="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98] {active
-                        ? 'bg-card text-foreground'
-                        : 'text-muted-foreground'}"
-                    style={active ? 'box-shadow:0 2px 8px hsla(222,47%,11%,0.10)' : ''}
-                >
-                    <t.icon size={17} strokeWidth={2.4} />
-                    <span class="tabular-nums">{t.label}</span>
-                </button>
-            {/each}
-        </div>
-    </div>
+        <Segmented
+            ariaLabel="Tipo de gasto"
+            options={TABS.map((t) => ({ value: t.id, label: t.label }))}
+            value={activeTab}
+            onChange={(v) => selectTab(v)}
+        />
     {/if}
 
     {#key activeTab}
-        <FadeInUp index={0} class="flex flex-1 flex-col">
+        <div class="flex flex-1 flex-col motion-safe:animate-fade-in-up">
             {#if activeTab === EXPENSES_TAB_FIXED && canFixed}
                 <FixedExpenses />
             {:else}
                 <VariableExpenses />
             {/if}
-        </FadeInUp>
+        </div>
     {/key}
 </div>

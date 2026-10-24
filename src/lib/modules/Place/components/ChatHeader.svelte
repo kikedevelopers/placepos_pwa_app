@@ -16,7 +16,7 @@
 
 <header
     class="relative z-10 flex items-center gap-2.5 border-b border-border/50 bg-background/80 px-3 py-2.5 backdrop-blur-xl"
-    style="padding-top:calc(env(safe-area-inset-top) + 0.6rem)"
+    style="padding-top:calc(var(--app-safe-top) + 0.6rem)"
 >
     <button
         type="button"

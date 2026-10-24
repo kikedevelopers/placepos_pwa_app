@@ -113,6 +113,31 @@ export type AdjustmentNote = {
     customerName: string
 }
 
+/** Recaudo de créditos de una edad (del día o de días anteriores). */
+export type AbonoAgeGroup = {
+    cash: number
+    consignacion: number
+    consignacionDetalle: BankDetail[]
+    total: number
+    profit: number
+    margin: number
+}
+
+/** Venta del día por hora (0–23, hora Colombia). */
+export type SalesByHourEntry = {
+    hour: number
+    total: number
+    count: number
+}
+
+export type SalesByHour = {
+    date: string
+    /** Siempre 24 entradas (0–23), con ceros incluidos. */
+    hours: SalesByHourEntry[]
+    total: number
+    count: number
+}
+
 export type DailyClosure = {
     date: string
     cashSalesTotal: number
@@ -143,9 +168,30 @@ export type DailyClosure = {
         abonosConsignacion: number
         abonosConsignacionDetalle: BankDetail[]
         abonosTotal: number
+        /**
+         * Recaudo discriminado por edad del crédito (del día vs anteriores).
+         * OPCIONAL: un backend una versión atrás no lo manda → la UI degrada a
+         * la vista plana de abonos (ver resolveAbonosByCreditAge).
+         */
+        abonosByCreditAge?: {
+            previous: AbonoAgeGroup
+            today: AbonoAgeGroup
+        }
         pendingBalance: number
     }
+    /**
+     * Venta directa (contado) discriminada, ANTES del crédito. OPCIONALES: si
+     * no llegan se derivan (ver resolveDirectSales).
+     */
+    directSalesTotal?: number
+    directSalesProfit?: number
+    directSalesMargin?: number
     expensesTotal: number
+    /**
+     * Abonos a transportistas del día: salida de caja informativa, NO resta de
+     * la ganancia. OPCIONAL (backend una versión atrás → 0).
+     */
+    carrierPaymentsTotal?: number
     finalTotal: number
     profit: number
     margin: number

@@ -14,11 +14,11 @@
     const hasBanner = $derived(!!loginError.message)
 </script>
 
-<div class="relative min-h-[100dvh] bg-background">
+<div class="relative min-h-[var(--app-height)] bg-background">
     <AuroraBackground />
 
     <div
-        class="relative flex min-h-[100dvh] flex-col items-center justify-center px-6 py-12 pt-[calc(env(safe-area-inset-top)+48px)]"
+        class="relative flex min-h-[var(--app-height)] flex-col items-center justify-center px-6 py-12 pt-[calc(var(--app-safe-top)+48px)]"
     >
         <form class="w-full max-w-sm" onsubmit={onSubmit}>
             <StaggerFadeIn index={0} class="mb-8">

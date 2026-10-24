@@ -45,7 +45,8 @@
                 : result
                   ? 'text-[14.5px] font-semibold'
                   : 'text-[13.5px] font-medium',
-            TONE_TEXT[tone]
+            // Un cero no "sube" ni "baja": sin color semántico.
+            value === 0 ? 'text-foreground' : TONE_TEXT[tone]
         )}
     >
         {formatCurrency(value)}

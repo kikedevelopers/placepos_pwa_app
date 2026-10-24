@@ -1,3 +1,4 @@
+import Big from 'big.js'
 import type { FixedExpense } from '$lib/api/requests/fixedExpenses'
 import {
     accruedInPeriodNumber,
@@ -32,13 +33,13 @@ export function useFixedExpensesSummary(
         const expenses = getExpenses()
         const now = getNow()
 
-        let accrued = 0
-        let monthly = 0
+        let accrued = new Big(0)
+        let monthly = new Big(0)
         let nextEnd: Date | null = null
 
         for (const expense of expenses) {
-            accrued += accruedInPeriodNumber(expense, now)
-            monthly += monthlyProjection(expense)
+            accrued = accrued.plus(accruedInPeriodNumber(expense, now))
+            monthly = monthly.plus(monthlyProjection(expense))
 
             const snapshot = computeAccrual(expense, now)
             const start = new Date(expense.start_date)
@@ -51,8 +52,8 @@ export function useFixedExpensesSummary(
 
         return {
             activeCount: expenses.length,
-            accruedToday: Math.round(accrued * 100) / 100,
-            monthlyProjection: Math.round(monthly * 100) / 100,
+            accruedToday: Number(accrued.toFixed(2)),
+            monthlyProjection: Number(monthly.toFixed(2)),
             nextPeriodEnd: nextEnd
         }
     })

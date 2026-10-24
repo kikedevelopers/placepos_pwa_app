@@ -39,6 +39,12 @@
         class?: string
         /** Al cambiar, vuelve el scroll al tope (p. ej. el término de búsqueda). */
         resetKey?: unknown
+        /**
+         * Espacio extra al final del scroll como longitud CSS (p. ej.
+         * `var(--dock-space)`), para que la última fila suba por encima de una
+         * barra flotante. No entra en el cálculo de la ventana visible.
+         */
+        tailSpace?: string
     }
 
     let {
@@ -51,7 +57,8 @@
         padStart = 0,
         padEnd = 0,
         class: className = '',
-        resetKey = undefined
+        resetKey = undefined,
+        tailSpace = undefined
     }: Props = $props()
 
     let scrollEl = $state<HTMLDivElement | null>(null)
@@ -135,4 +142,7 @@
             {/each}
         </div>
     </div>
+    {#if tailSpace}
+        <div aria-hidden="true" data-testid="virtual-tail" style={`height:${tailSpace}`}></div>
+    {/if}
 </div>

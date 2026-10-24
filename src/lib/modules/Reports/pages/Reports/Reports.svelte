@@ -1,75 +1,64 @@
 <script lang="ts">
-    import FadeInUp from '$lib/components/FadeInUp.svelte'
+    import { goto } from '$app/navigation'
+    import { page } from '$app/state'
+    import { Lock } from '@lucide/svelte'
+    import { EmptyState, TabRail } from '$lib/components/premium'
     import { usePermissions } from '$lib/hooks/usePermissions.svelte'
-    import ScrollTabs from './components/ScrollTabs.svelte'
-    import ReportState from './components/ReportState.svelte'
-    import SalesCreditsView from './views/SalesCreditsView.svelte'
+    import { resolveReportTab, visibleReportTabs, type ReportTabId } from './utils/reportTabs'
+    import SalesReportView from './views/SalesReportView.svelte'
+    import CreditsReportView from './views/CreditsReportView.svelte'
     import ComparativeView from './views/ComparativeView.svelte'
-    import FinanceView from './views/FinanceView.svelte'
+    import SummaryView from './views/SummaryView.svelte'
     import CashiersReportView from './views/CashiersReportView.svelte'
     import CustomersRfmView from './views/CustomersRfmView.svelte'
 
-    // Cada tab se muestra según su key de permiso (espejo del grupo Informes de
-    // placepos). "Ventas y Créditos" aparece si tiene Ventas O Créditos (el
-    // sub-toggle interno gatea cada uno). owner/superadmin ven todas.
+    // Mismas pestañas, nombres y permisos que el grupo "Informes" de placepos.
+    // La activa vive en la URL (?tab=) para sobrevivir a recargas y enlaces.
     const permissions = usePermissions()
-    const tabs = $derived(
-        [
-            {
-                id: 'salescredits',
-                label: 'Ventas y Créditos',
-                show:
-                    permissions.can('canAccessSalesReport') ||
-                    permissions.can('canAccessCreditsReport')
-            },
-            {
-                id: 'comparative',
-                label: 'Comparativa',
-                show: permissions.can('canAccessComparativeReport')
-            },
-            {
-                id: 'finance',
-                label: 'Finanzas',
-                show: permissions.can('canAccessDailyClosureReport')
-            },
-            { id: 'cashiers', label: 'Cajeros', show: permissions.can('canAccessCashierReport') },
-            { id: 'customers', label: 'Clientes', show: permissions.can('canAccessClientsReport') }
-        ].filter((t) => t.show)
-    )
+    const tabs = $derived(visibleReportTabs((key) => permissions.can(key)))
+    const active = $derived(resolveReportTab(page.url.searchParams.get('tab'), tabs))
 
-    let tab = $state(0)
-    // Si el índice queda fuera del set visible, lo acotamos para no renderizar
-    // un tab inexistente.
-    const activeIndex = $derived(Math.min(tab, Math.max(0, tabs.length - 1)))
-    const activeId = $derived(tabs[activeIndex]?.id ?? null)
+    const select = (id: string) => {
+        if (id === active) return
+        const url = new URL(page.url)
+        url.searchParams.set('tab', id)
+        goto(url, { replaceState: true, noScroll: true, keepFocus: true })
+    }
 </script>
 
 <div class="flex flex-1 flex-col">
     {#if tabs.length === 0}
-        <ReportState kind="empty" message="No tienes acceso a ningún informe." />
+        <EmptyState
+            icon={Lock}
+            title="Sin informes disponibles"
+            message="Tu rol no tiene acceso a ningún informe. Pídele al administrador que te lo habilite."
+        />
     {:else}
-        <div class="px-5 pb-1 pt-4">
-            <ScrollTabs
-                tabs={tabs.map((t) => t.label)}
-                value={activeIndex}
-                onChange={(i) => (tab = i)}
+        <div class="px-5 pb-2 pt-5">
+            <TabRail
+                ariaLabel="Informes"
+                tabs={tabs.map((t) => ({ id: t.id, label: t.label }))}
+                value={active ?? ''}
+                onChange={select}
             />
         </div>
 
-        {#key activeId}
-            <FadeInUp index={0} class="flex-1">
-                {#if activeId === 'salescredits'}
-                    <SalesCreditsView />
-                {:else if activeId === 'comparative'}
+        {#key active}
+            <div class="flex-1 motion-safe:animate-fade-in-up" role="tabpanel">
+                {#if active === ('sales' satisfies ReportTabId)}
+                    <SalesReportView />
+                {:else if active === 'credits'}
+                    <CreditsReportView />
+                {:else if active === 'comparative'}
                     <ComparativeView />
-                {:else if activeId === 'finance'}
-                    <FinanceView />
-                {:else if activeId === 'cashiers'}
+                {:else if active === 'summary'}
+                    <SummaryView />
+                {:else if active === 'cashiers'}
                     <CashiersReportView />
-                {:else if activeId === 'customers'}
+                {:else if active === 'customers'}
                     <CustomersRfmView />
                 {/if}
-            </FadeInUp>
+            </div>
         {/key}
     {/if}
 </div>

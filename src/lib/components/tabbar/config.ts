@@ -82,3 +82,13 @@ export const filterTabs = (can: (key: PermissionKey) => boolean): VisibleTabs =>
     right: RIGHT_TABS.filter((tab) => hasPermission(can, tab.permission)),
     showPos: hasPermission(can, POS_TAB.permission)
 })
+
+/**
+ * ¿La tab está activa en esta ruta? Inicio solo en `/` exacto; el resto también
+ * en sus subrutas (`/reportes/ventas` mantiene "Reportes" activa).
+ */
+export const isTabActive = (tab: Pick<Tab, 'match'>, pathname: string): boolean => {
+    const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+    if (tab.match === '/') return path === '/'
+    return path === tab.match || path.startsWith(`${tab.match}/`)
+}

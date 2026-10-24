@@ -4,7 +4,7 @@
     import PressableScale from '$lib/components/PressableScale.svelte'
     import { purchaseViewer } from '$lib/components/PurchaseViewer'
     import { formatCurrency } from '$lib/utils/numbers'
-    import { formatShortDate } from '$lib/utils/dates'
+    import { shortDate } from '$lib/components/premium'
 
     interface Props {
         purchase: Purchase
@@ -15,7 +15,7 @@
     const paid = $derived(balance <= 0)
     const received = $derived(purchase.status === 'RECEIVED')
     const meta = $derived(
-        [`COMP ${purchase.purchase_number}`, formatShortDate(purchase.created_at), purchase.created_by]
+        [`COMP ${purchase.purchase_number}`, shortDate(purchase.created_at), purchase.created_by]
             .filter(Boolean)
             .join(' · ')
     )

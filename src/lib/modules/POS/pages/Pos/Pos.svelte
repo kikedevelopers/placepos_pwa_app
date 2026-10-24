@@ -229,11 +229,11 @@
     }
 </script>
 
-<div class="relative flex h-[100dvh] flex-col bg-background">
+<div class="relative flex h-[var(--app-height)] flex-col bg-background">
     <!-- Header inmersivo (safe-area top). -->
     <header
         class="border-b border-border/70 bg-card"
-        style="padding-top: env(safe-area-inset-top)"
+        style="padding-top: var(--app-safe-top)"
     >
         <div class="flex flex-row items-center justify-between px-3 py-2">
             <button

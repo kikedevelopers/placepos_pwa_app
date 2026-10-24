@@ -1,17 +1,17 @@
 <script lang="ts">
-    import { Plus, UserPlus, Users } from '@lucide/svelte'
+    import { Plus, Users } from '@lucide/svelte'
     import type { Customer } from '$lib/api/requests/customers'
     import { getErrorMessage } from '$lib/utils/errors'
     import { useDebouncedValue } from '$lib/hooks/useDebouncedValue.svelte'
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
     import SearchField from '$lib/components/SearchField.svelte'
     import SelectField from '$lib/components/SelectField.svelte'
-    import ScreenState from '$lib/components/ScreenState.svelte'
-    import StatTile from '$lib/components/StatTile.svelte'
+    import { EmptyState, Metrics, ProgressiveList, SkeletonList } from '$lib/components/premium'
     import { useCustomerCategories } from '$lib/modules/CustomerCategories/hooks/useCustomerCategories'
     import { useCustomerAnalytics, useCustomers } from './hooks/useCustomers'
     import { filterCustomers } from './utils/filterCustomers'
-    import CustomerCard from './components/CustomerCard.svelte'
+    import CustomerRow from './components/CustomerRow.svelte'
+    import { groupByInitial } from './utils/groupCustomers'
     import CustomerFormModal from './components/CustomerFormModal.svelte'
 
     const role = useUserRole()
@@ -34,6 +34,7 @@
         ...categories.map((c) => ({ value: String(c.id), label: c.name }))
     ])
     const filtered = $derived(filterCustomers(data ?? [], debounced.value, categoryFilter))
+    const groups = $derived(groupByInitial(filtered, (c) => c.name))
 
     const openCreate = () => {
         editing = null
@@ -46,74 +47,72 @@
     }
 </script>
 
-<div class="flex flex-1 flex-col gap-3 px-5 pb-8 pt-4">
-    <div class="flex flex-col gap-4 pb-3">
-        <div class="flex gap-3">
-            <div class="flex-1">
-                <SearchField
-                    bind:value={search}
-                    placeholder="Buscar por nombre, correo o documento"
-                />
-            </div>
-            {#if role.canManage}
-                <button
-                    type="button"
-                    onclick={openCreate}
-                    aria-label="Nuevo cliente"
-                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary transition-transform active:scale-[0.97]"
-                >
-                    <Plus size={22} color="white" strokeWidth={2.5} />
-                </button>
-            {/if}
+<div class="flex flex-col gap-4 px-5 pb-6 pt-5">
+    <div class="flex items-center gap-2.5">
+        <div class="min-w-0 flex-1">
+            <SearchField bind:value={search} placeholder="Nombre, correo o documento" />
         </div>
-
-        {#if categories.length > 0}
-            <!-- Filtro por categoría especial del cliente. -->
-            <SelectField
-                value={categoryFilter === null ? '' : String(categoryFilter)}
-                options={categoryOptions}
-                onChange={(v) => (categoryFilter = v ? Number(v) : null)}
-                placeholder="Todas las categorías"
-                sheetTitle="Filtrar por categoría"
-            />
-        {/if}
-
-        {#if $analytics.data}
-            <div class="flex gap-3">
-                <StatTile
-                    icon={Users}
-                    label="Total clientes"
-                    value={String($analytics.data.customers_count)}
-                    bg="hsla(217, 91%, 50%, 0.12)"
-                    fg="hsl(217, 91%, 50%)"
-                />
-                <StatTile
-                    icon={UserPlus}
-                    label="Nuevos este mes"
-                    value={String($analytics.data.new_customers)}
-                    bg="hsla(158, 64%, 38%, 0.12)"
-                    fg="hsl(158, 64%, 38%)"
-                />
-            </div>
-        {/if}
-
-        {#if $query.isLoading}
-            <ScreenState kind="loading" />
-        {:else if $query.isError}
-            <ScreenState kind="error" message={getErrorMessage($query.error)} />
-        {:else if data && filtered.length === 0}
-            <ScreenState
-                kind="empty"
-                message={search
-                    ? 'Sin resultados para tu búsqueda.'
-                    : 'Aún no hay clientes. Crea el primero.'}
-            />
+        {#if role.canManage}
+            <button
+                type="button"
+                onclick={openCreate}
+                aria-label="Nuevo cliente"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_14px_-6px_hsl(var(--primary)/0.7)] transition-transform duration-150 ease-out active:scale-[0.92]"
+            >
+                <Plus size={20} strokeWidth={2.5} />
+            </button>
         {/if}
     </div>
 
-    {#each filtered as customer (customer.id)}
-        <CustomerCard {customer} onclick={() => openEdit(customer)} />
-    {/each}
+    {#if $analytics.data}
+        <Metrics
+            ariaLabel="Resumen de clientes"
+            items={[
+                { label: 'Clientes', text: $analytics.data.customers_count.toLocaleString('es-CO') },
+                { label: 'Nuevos este mes', text: $analytics.data.new_customers.toLocaleString('es-CO'), tone: $analytics.data.new_customers > 0 ? 'positive' : 'neutral' }
+            ]}
+        />
+    {/if}
+
+    {#if categories.length > 0}
+        <!-- Filtro por categoría especial del cliente. -->
+        <SelectField
+            value={categoryFilter === null ? '' : String(categoryFilter)}
+            options={categoryOptions}
+            onChange={(v) => (categoryFilter = v ? Number(v) : null)}
+            placeholder="Todas las categorías"
+            sheetTitle="Filtrar por categoría"
+        />
+    {/if}
+
+    {#if $query.isLoading}
+        <SkeletonList rows={8} />
+    {:else if $query.isError}
+        <EmptyState kind="error" title="No se pudieron cargar los clientes" message={getErrorMessage($query.error)} />
+    {:else if data && filtered.length === 0}
+        <EmptyState
+            icon={Users}
+            title={search ? 'Sin resultados' : 'Aún no hay clientes'}
+            message={search ? 'Prueba con otro nombre, correo o documento.' : 'Crea el primero con el botón +.'}
+        />
+    {:else if data}
+        <ProgressiveList items={groups} step={6} resetKey={`${debounced.value}|${categoryFilter}`}>
+            {#snippet children(shown)}
+                <div class="flex flex-col gap-4">
+                    {#each shown as group (group.letter)}
+                        <section aria-label={`Clientes con ${group.letter}`}>
+                            <h3 class="mb-1.5 px-1 text-[13px] font-semibold text-muted-foreground">{group.letter}</h3>
+                            <div class="surface group-rows overflow-hidden">
+                                {#each group.items as customer (customer.id)}
+                                    <CustomerRow {customer} onclick={role.canManage ? () => openEdit(customer) : undefined} />
+                                {/each}
+                            </div>
+                        </section>
+                    {/each}
+                </div>
+            {/snippet}
+        </ProgressiveList>
+    {/if}
 </div>
 
 {#if formOpen}

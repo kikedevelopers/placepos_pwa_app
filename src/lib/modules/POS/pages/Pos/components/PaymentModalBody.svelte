@@ -19,7 +19,7 @@
 
 <div class="flex h-full flex-col bg-background">
     <!-- Header -->
-    <div class="border-b border-border/70 bg-card pt-[env(safe-area-inset-top)]">
+    <div class="border-b border-border/70 bg-card pt-[var(--app-safe-top)]">
         <div class="flex items-center justify-between px-3 py-2">
             {#if p.phase === 'simple'}
                 <button

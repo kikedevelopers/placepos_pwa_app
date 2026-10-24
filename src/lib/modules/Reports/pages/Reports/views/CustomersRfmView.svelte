@@ -1,135 +1,95 @@
 <script lang="ts">
-    import { CalendarDays, TrendingUp, Users, Wallet } from '@lucide/svelte'
-    import { formatCurrency } from '$lib/utils/numbers'
+    import { CalendarDays, Users } from '@lucide/svelte'
     import { getErrorMessage } from '$lib/utils/errors'
     import { daysAgoISO, todayISO } from '$lib/utils/dates'
-    import type { CustomerRfm } from '$lib/api/requests/reports'
+    import { usePermissions } from '$lib/hooks/usePermissions.svelte'
+    import { EmptyState, Hero, Metrics, Money, ProgressiveList, Segmented, Skeleton, SkeletonList, ToolbarChip, percent, plural } from '$lib/components/premium'
+    import { cn } from '$lib/utils'
     import { useCustomersRfm } from '../hooks/useCustomersRfm'
-    import { rangeLabel, type DateRangeValue } from '../components/dateRange'
+    import { rangeCaption, type DateRangeValue } from '../components/dateRange'
     import DateRangeSheet from '../components/DateRangeSheet.svelte'
-    import ToolbarButton from '../components/ToolbarButton.svelte'
-    import ReportStatCard from '../components/ReportStatCard.svelte'
-    import ReportState from '../components/ReportState.svelte'
-    import Badge from '../components/Badge.svelte'
+    import { initials } from '../utils/creditRow'
+    import { recencyLabel, rfmTotals, sortAndFilterRfm } from '../utils/customersRfm'
 
-    // Default: últimos 90 días (paridad placepos). Modo custom para que el sheet
-    // muestre el rango manual; el usuario puede cambiar a cualquier preset.
+    // Por defecto los últimos 90 días (paridad placepos).
     let range = $state<DateRangeValue>({ mode: 'custom', from: daysAgoISO(90), to: todayISO() })
     let rangeOpen = $state(false)
+    let filter = $state<'all' | 'overdue'>('all')
 
+    const permissions = usePermissions()
     const query = useCustomersRfm(() => ({ from: range.from, to: range.to }))
-    // Top spenders primero (Monetary desc).
-    const customers = $derived(
-        [...($query.data?.customers ?? [])].sort((a, b) => b.totalAmount - a.totalAmount)
-    )
-
-    const totals = $derived.by(() => {
-        const list = $query.data?.customers ?? []
-        const amount = list.reduce((s, c) => s + c.totalAmount, 0)
-        const profit = list.reduce((s, c) => s + c.totalProfit, 0)
-        return {
-            count: list.length,
-            amount,
-            profit,
-            margin: amount > 0 ? (profit / amount) * 100 : 0,
-            overdue: list.filter((c) => c.overdue).length
-        }
-    })
-
-    const recency = (c: CustomerRfm): string =>
-        c.daysSinceLast <= 0 ? 'Hoy' : `Hace ${c.daysSinceLast} día${c.daysSinceLast === 1 ? '' : 's'}`
+    const list = $derived($query.data?.customers ?? [])
+    const totals = $derived(rfmTotals(list))
+    const customers = $derived(sortAndFilterRfm(list, filter === 'overdue'))
 </script>
 
-<div class="flex flex-col gap-3 px-5 pb-8 pt-3">
+<div class="flex flex-col gap-4 px-5 pb-6 pt-2">
     <div class="flex items-center gap-2">
-        <ToolbarButton icon={CalendarDays} label={rangeLabel(range)} active onclick={() => (rangeOpen = true)} />
+        <ToolbarChip icon={CalendarDays} label={rangeCaption(range)} onclick={() => (rangeOpen = true)} ariaLabel="Cambiar periodo" />
     </div>
 
-    {#if totals.count > 0}
-        <div class="flex flex-col gap-3 pt-1">
-            <div class="flex gap-3">
-                <ReportStatCard
-                    icon={Users}
-                    tint="primary"
-                    label="Clientes"
-                    value={String(totals.count)}
-                    description={totals.overdue ? `${totals.overdue} con mora` : 'Sin mora'}
-                />
-                <ReportStatCard
-                    icon={Wallet}
-                    tint="success"
-                    label="Monto total"
-                    value={formatCurrency(totals.amount)}
-                    description="Compras del periodo"
-                />
-            </div>
-            <div class="flex gap-3">
-                <ReportStatCard
-                    icon={TrendingUp}
-                    tint="violet"
-                    label="Ganancia"
-                    value={formatCurrency(totals.profit)}
-                    description={`${totals.margin.toFixed(1)}% margen`}
-                />
-                <ReportStatCard
-                    icon={Users}
-                    tint="warning"
-                    label="Con mora"
-                    value={String(totals.overdue)}
-                    description="Créditos vencidos"
-                />
-            </div>
-        </div>
-    {/if}
-
     {#if $query.isLoading}
-        <ReportState kind="loading" />
-    {:else if $query.isError}
-        <ReportState kind="error" message={getErrorMessage($query.error)} />
-    {:else if customers.length === 0}
-        <ReportState kind="empty" message="No hay clientes con compras en el periodo." />
-    {/if}
-
-    {#each customers as c (c.customerId)}
-        <div
-            class="rounded-2xl border border-border bg-card p-4"
-            style="box-shadow:0 4px 10px hsla(222,47%,11%,0.04)"
-        >
-            <div class="mb-2 flex items-center justify-between gap-2">
-                <p class="truncate text-sm font-semibold text-foreground">{c.customerName}</p>
-                <span class="flex shrink-0 items-center gap-1.5">
-                    {#if c.overdue}
-                        <Badge label="Mora" tone="destructive" />
-                    {/if}
-                    <span class="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        {recency(c)}
-                    </span>
-                </span>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 border-t border-border/60 pt-2">
-                <div>
-                    <p class="text-[10px] text-muted-foreground">Compras</p>
-                    <p class="text-sm font-bold text-foreground">{c.ticketCount}</p>
-                    <p class="text-[10px] text-muted-foreground/70">{c.purchaseDates} día(s)</p>
-                </div>
-                <div>
-                    <p class="text-[10px] text-muted-foreground">Gastado</p>
-                    <p class="text-sm font-bold text-foreground">{formatCurrency(c.totalAmount)}</p>
-                </div>
-                <div>
-                    <p class="text-[10px] text-muted-foreground">Ganancia</p>
-                    <p class="text-sm font-bold text-success">{formatCurrency(c.totalProfit)}</p>
-                    <p class="text-[10px] text-muted-foreground/70">{c.totalMargin.toFixed(1)}%</p>
-                </div>
-            </div>
+        <div class="surface px-5 pb-5 pt-[18px]">
+            <Skeleton class="h-3.5 w-28" />
+            <Skeleton class="mt-3 h-9 w-44" />
         </div>
-    {/each}
+        <SkeletonList rows={6} />
+    {:else if $query.isError}
+        <EmptyState kind="error" title="No se pudo cargar" message={getErrorMessage($query.error)} />
+    {:else if list.length === 0}
+        <EmptyState icon={Users} title="Sin compras en el periodo" message="Ningún cliente identificado compró en estas fechas." />
+    {:else}
+        <Hero label="Ventas acumuladas" amount={totals.amount} caption={plural(totals.count, 'cliente')} />
+        <Metrics
+            ariaLabel="Resumen de clientes"
+            items={[
+                ...(permissions.canViewProfit
+                    ? [{ label: 'Ganancia', amount: totals.profit, tone: (totals.profit >= 0 ? 'positive' : 'negative') as 'positive' | 'negative', hint: `${percent(totals.margin)} de margen` }]
+                    : []),
+                { label: 'Vencidos', text: totals.overdue.toLocaleString('es-CO'), tone: totals.overdue > 0 ? 'warning' : 'neutral', hint: 'Fuera de su frecuencia' }
+            ]}
+        />
+
+        <Segmented
+            ariaLabel="Clientes a mostrar"
+            options={[
+                { value: 'all', label: 'Todos' },
+                { value: 'overdue', label: `Vencidos (${totals.overdue})` }
+            ]}
+            value={filter}
+            onChange={(v) => (filter = v)}
+        />
+
+        {#if customers.length === 0}
+            <EmptyState icon={Users} title="Ningún cliente vencido" message="Todos compran dentro de su frecuencia habitual." />
+        {:else}
+            <ProgressiveList items={customers} resetKey={`${range.from}|${range.to}|${filter}`}>
+                {#snippet children(shown)}
+                    <div class="surface group-rows overflow-hidden">
+                        {#each shown as customer (customer.customerId)}
+                            <div class="row flex items-center gap-3 px-4 py-3.5">
+                                <span class={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold', customer.overdue ? 'bg-warning/[0.12] text-warning' : 'bg-foreground/[0.06] text-foreground/75')}>
+                                    {initials(customer.customerName)}
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block truncate text-[15px] font-medium text-foreground">{customer.customerName}</span>
+                                    <span class="mt-0.5 block truncate text-[12.5px] text-muted-foreground">
+                                        {#if customer.overdue}<span class="font-medium text-warning">Vencido</span>{' · '}{/if}{recencyLabel(customer.daysSinceLast)}{' · '}{plural(customer.ticketCount, 'compra')}
+                                    </span>
+                                </span>
+                                <span class="flex shrink-0 flex-col items-end">
+                                    <Money value={customer.totalAmount} class="text-[15.5px] font-semibold text-foreground" />
+                                    {#if permissions.canViewProfit}
+                                        <span class="mt-0.5 text-[11.5px] font-medium tabular-nums text-success">{percent(customer.totalMargin)} margen</span>
+                                    {/if}
+                                </span>
+                            </div>
+                        {/each}
+                    </div>
+                {/snippet}
+            </ProgressiveList>
+        {/if}
+    {/if}
 </div>
 
-<DateRangeSheet
-    open={rangeOpen}
-    value={range}
-    onClose={() => (rangeOpen = false)}
-    onApply={(v) => (range = v)}
-/>
+<DateRangeSheet open={rangeOpen} value={range} onClose={() => (rangeOpen = false)} onApply={(v) => (range = v)} />
