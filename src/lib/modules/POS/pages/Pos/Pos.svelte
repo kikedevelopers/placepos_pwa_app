@@ -229,7 +229,7 @@
     }
 </script>
 
-<div class="relative flex h-[var(--app-height)] flex-col bg-background">
+<div class="fixed inset-0 flex flex-col bg-background">
     <!-- Header inmersivo (safe-area top). -->
     <header
         class="border-b border-border/70 bg-card"

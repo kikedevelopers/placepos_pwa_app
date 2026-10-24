@@ -78,8 +78,11 @@ describe('barra de estado', () => {
     it('iOS instalado: html y el shell miden la pantalla completa (WebKit 301108)', () => {
         const css = readFileSync(resolve(ROOT, 'src', 'app.css'), 'utf8')
         const ios = css.slice(css.indexOf('html.ios-standalone {'))
-        expect(ios).toMatch(/--app-height: 100lvh/)
-        expect(ios).toMatch(/min-height: 100lvh/)
+        // Alto mínimo CON TOPE (frappe-ui): 100lvh solo sobremide en iOS 26
+        // (WebKit 316008) y dejaba el dock cortado abajo en producción.
+        expect(ios).toMatch(/min-height: min\(100lvh, calc\(100% \+ env\(safe-area-inset-top\)\)\)/)
+        expect(ios).not.toMatch(/--app-height: 100lvh/)
+        expect(css).not.toMatch(/html\.ios-standalone body/)
         // Sin respaldo fijo: si la barra es opaca (inset 0) un mínimo de 50px
         // dejaba una banda azul vacía bajo la hora.
         expect(ios).not.toMatch(/--app-safe-top: max\(/)
