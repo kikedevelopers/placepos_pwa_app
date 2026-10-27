@@ -3,6 +3,8 @@
     import PlaceMark from './PlaceMark.svelte'
     import SaleCard from './SaleCard.svelte'
     import TreasuryCard from './TreasuryCard.svelte'
+    import PurchaseCard from './PurchaseCard.svelte'
+    import MessageAttachments from './MessageAttachments.svelte'
     import { renderMarkdown } from '$lib/modules/Place/lib/markdown'
     import { describeToolIcon } from '$lib/modules/Place/lib/tool-icons'
     import type { ChatMessage } from '$lib/modules/Place/store/chat.svelte'
@@ -19,6 +21,7 @@
     const isEmpty = $derived(message.content.trim().length === 0)
     const runningTools = $derived((message.tools ?? []).filter((t) => t.status !== 'error'))
     const cards = $derived(message.cards ?? [])
+    const attachments = $derived(message.attachments ?? [])
 
     let copied = $state(false)
     function copy() {
@@ -33,13 +36,18 @@
 </script>
 
 {#if isUser}
-    <div class="flex justify-end">
-        <div
-            class="max-w-[85%] rounded-[18px] rounded-br-[6px] px-3.5 py-2.5 text-[14px] leading-[1.55] text-white ring-1 ring-inset ring-white/10"
-            style="background-image:linear-gradient(135deg,#1e7df0,#4f46e5);box-shadow:0 6px 18px -10px rgba(30,125,240,0.9)"
-        >
-            <p class="whitespace-pre-wrap break-words">{message.content}</p>
-        </div>
+    <div class="flex flex-col items-end gap-1.5">
+        {#if attachments.length > 0}
+            <MessageAttachments {attachments} />
+        {/if}
+        {#if !isEmpty}
+            <div
+                class="max-w-[85%] rounded-[18px] rounded-br-[6px] px-3.5 py-2.5 text-[14px] leading-[1.55] text-white ring-1 ring-inset ring-white/10"
+                style="background-image:linear-gradient(135deg,#1e7df0,#4f46e5);box-shadow:0 6px 18px -10px rgba(30,125,240,0.9)"
+            >
+                <p class="whitespace-pre-wrap break-words">{message.content}</p>
+            </div>
+        {/if}
     </div>
 {:else}
     <div class="flex gap-2.5">
@@ -62,6 +70,8 @@
             {#each cards as card, index (`${card.kind}-${index}`)}
                 {#if card.kind === 'treasury_preview' || card.kind === 'treasury_done'}
                     <TreasuryCard {card} />
+                {:else if card.kind === 'purchase_preview' || card.kind === 'purchase_created'}
+                    <PurchaseCard {card} />
                 {:else}
                     <SaleCard {card} />
                 {/if}

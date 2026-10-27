@@ -99,10 +99,63 @@ export type TreasuryDoneCard =
           difference: number
       }
 
-export type AssistantCard = SalePreviewCard | SaleCreatedCard | TreasuryPreviewCard | TreasuryDoneCard
+/** Una línea de la compra que Place armó desde la factura del proveedor. */
+export interface PurchasePreviewLine {
+    product_name: string
+    sku_code: string | null
+    packaging_name: string | null
+    packaging_value: number
+    /** Paquetes. */
+    quantity: number
+    /** Costo por paquete. */
+    unit_cost: number
+    iva_rate: number
+    subtotal: number
+    iva_amount: number
+    total: number
+    /** Texto original de la factura. */
+    source_description: string
+    /** Último costo registrado (referencia); `null` si nunca se compró. */
+    last_cost: number | null
+}
+
+/** Vista previa de una COMPRA a proveedor esperando el "sí". */
+export interface PurchasePreviewCard {
+    kind: 'purchase_preview'
+    supplier: { name: string; document: string | null }
+    invoice_reference: string | null
+    lines: PurchasePreviewLine[]
+    /** Renglones de la factura que no entraron, con el motivo. */
+    excluded: Array<{ description: string; reason: string }>
+    warnings: string[]
+    subtotal: number
+    iva_total: number
+    total: number
+    /** Hasta cuándo el servidor guarda la vista previa para confirmarla. */
+    expires_at: string
+    status: 'pending' | 'superseded' | 'confirmed'
+}
+
+export interface PurchaseCreatedCard {
+    kind: 'purchase_created'
+    purchase_id: number
+    purchase_number: string
+    supplier_name: string
+    lines_count: number
+    total: number
+    status: 'PENDING'
+}
+
+export type AssistantCard =
+    | SalePreviewCard
+    | SaleCreatedCard
+    | TreasuryPreviewCard
+    | TreasuryDoneCard
+    | PurchasePreviewCard
+    | PurchaseCreatedCard
 
 /** Tarjetas que esperan el "sí" (el servidor guarda UNA pendiente por usuario). */
-export type PreviewCard = SalePreviewCard | TreasuryPreviewCard
+export type PreviewCard = SalePreviewCard | TreasuryPreviewCard | PurchasePreviewCard
 
 /** Lo que el servidor ve de una tarjeta cuando Place no escribió texto. */
 export const CARD_ONLY_TURN = '(Se mostró la vista previa del pedido.)'
@@ -232,6 +285,128 @@ const parseTreasuryDone = (data: Record<string, unknown>): AssistantCard | null 
     return null
 }
 
+const nullableText = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim().length > 0 ? value : null
+
+const isPositiveInteger = (value: unknown): value is number =>
+    isFiniteNumber(value) && Number.isInteger(value) && value > 0
+
+const parsePurchaseLine = (raw: unknown): PurchasePreviewLine | null => {
+    const line = asRecord(raw)
+    if (
+        !line ||
+        !isText(line.product_name) ||
+        !isFiniteNumber(line.packaging_value) ||
+        line.packaging_value <= 0 ||
+        !isFiniteNumber(line.quantity) ||
+        line.quantity <= 0 ||
+        !isFiniteNumber(line.unit_cost) ||
+        line.unit_cost < 0 ||
+        !isFiniteNumber(line.iva_rate) ||
+        line.iva_rate < 0 ||
+        !isFiniteNumber(line.subtotal) ||
+        !isFiniteNumber(line.iva_amount) ||
+        !isFiniteNumber(line.total) ||
+        typeof line.source_description !== 'string' ||
+        (line.sku_code !== null && line.sku_code !== undefined && typeof line.sku_code !== 'string') ||
+        (line.packaging_name !== null &&
+            line.packaging_name !== undefined &&
+            typeof line.packaging_name !== 'string') ||
+        (line.last_cost !== null && line.last_cost !== undefined && !isFiniteNumber(line.last_cost))
+    ) {
+        return null
+    }
+    return {
+        product_name: line.product_name,
+        sku_code: nullableText(line.sku_code),
+        packaging_name: nullableText(line.packaging_name),
+        packaging_value: line.packaging_value,
+        quantity: line.quantity,
+        unit_cost: line.unit_cost,
+        iva_rate: line.iva_rate,
+        subtotal: line.subtotal,
+        iva_amount: line.iva_amount,
+        total: line.total,
+        source_description: line.source_description,
+        last_cost: optionalNumber(line.last_cost)
+    }
+}
+
+/** Compra armada desde una factura: proveedor, ≥ 1 línea válida y totales. */
+const parsePurchasePreview = (
+    card: Record<string, unknown>,
+    data: Record<string, unknown>
+): PurchasePreviewCard | null => {
+    const supplier = asRecord(data.supplier)
+    if (
+        !supplier ||
+        !isText(supplier.name) ||
+        (supplier.document !== null && supplier.document !== undefined && typeof supplier.document !== 'string') ||
+        (data.invoice_reference !== null &&
+            data.invoice_reference !== undefined &&
+            typeof data.invoice_reference !== 'string') ||
+        !isFiniteNumber(data.subtotal) ||
+        !isFiniteNumber(data.iva_total) ||
+        !isFiniteNumber(data.total) ||
+        typeof data.expires_at !== 'string' ||
+        !Number.isFinite(Date.parse(data.expires_at))
+    ) {
+        return null
+    }
+    if (!Array.isArray(data.lines) || data.lines.length === 0) return null
+    const lines = data.lines.map(parsePurchaseLine)
+    if (lines.some((line) => line === null)) return null
+    if (data.excluded !== undefined && !Array.isArray(data.excluded)) return null
+
+    const excluded = (Array.isArray(data.excluded) ? data.excluded : [])
+        .map(asRecord)
+        .filter(
+            (item): item is Record<string, unknown> & { description: string; reason: string } =>
+                item !== null && isText(item.description) && typeof item.reason === 'string'
+        )
+        .map((item) => ({ description: item.description, reason: item.reason }))
+
+    return {
+        kind: 'purchase_preview',
+        supplier: { name: supplier.name, document: nullableText(supplier.document) },
+        invoice_reference: nullableText(data.invoice_reference),
+        lines: lines as PurchasePreviewLine[],
+        excluded,
+        warnings: Array.isArray(data.warnings)
+            ? data.warnings.filter((warning): warning is string => isText(warning))
+            : [],
+        subtotal: data.subtotal,
+        iva_total: data.iva_total,
+        total: data.total,
+        expires_at: data.expires_at,
+        status: previewStatus(card.status)
+    }
+}
+
+const parsePurchaseCreated = (data: Record<string, unknown>): PurchaseCreatedCard | null => {
+    if (
+        !isPositiveInteger(data.purchase_id) ||
+        !isText(data.purchase_number) ||
+        !isText(data.supplier_name) ||
+        !isFiniteNumber(data.lines_count) ||
+        !Number.isInteger(data.lines_count) ||
+        data.lines_count < 0 ||
+        !isFiniteNumber(data.total) ||
+        data.status !== 'PENDING'
+    ) {
+        return null
+    }
+    return {
+        kind: 'purchase_created',
+        purchase_id: data.purchase_id,
+        purchase_number: data.purchase_number,
+        supplier_name: data.supplier_name,
+        lines_count: data.lines_count,
+        total: data.total,
+        status: 'PENDING'
+    }
+}
+
 /** Valida una tarjeta del stream (`{ kind, data }`) o ya guardada (aplanada). */
 export const parseCard = (raw: unknown): AssistantCard | null => {
     const card = asRecord(raw)
@@ -284,6 +459,8 @@ export const parseCard = (raw: unknown): AssistantCard | null => {
 
     if (card.kind === 'treasury_preview') return parseTreasuryPreview(card, data)
     if (card.kind === 'treasury_done') return parseTreasuryDone(data)
+    if (card.kind === 'purchase_preview') return parsePurchasePreview(card, data)
+    if (card.kind === 'purchase_created') return parsePurchaseCreated(data)
 
     return null
 }
@@ -299,12 +476,13 @@ export const parseCards = (raw: unknown): AssistantCard[] | undefined =>
         : undefined
 
 export const isPreviewCard = (card: AssistantCard): card is PreviewCard =>
-    card.kind === 'sale_preview' || card.kind === 'treasury_preview'
+    card.kind === 'sale_preview' || card.kind === 'treasury_preview' || card.kind === 'purchase_preview'
 
 /** Tarjeta de resultado → la vista previa que confirma. */
 const CONFIRMS: Partial<Record<AssistantCard['kind'], PreviewCard['kind']>> = {
     sale_created: 'sale_preview',
-    treasury_done: 'treasury_preview'
+    treasury_done: 'treasury_preview',
+    purchase_created: 'purchase_preview'
 }
 
 /**

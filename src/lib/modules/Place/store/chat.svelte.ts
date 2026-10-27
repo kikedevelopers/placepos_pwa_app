@@ -6,6 +6,12 @@ import {
     settledStatus,
     type AssistantCard
 } from '$lib/modules/Place/lib/cards'
+import {
+    MAX_ATTACHMENTS_PER_MESSAGE,
+    buildChatTurns,
+    parseStoredAttachments,
+    type ChatAttachment
+} from '$lib/modules/Place/lib/attachments'
 import { refreshAfterCard } from '$lib/modules/Place/lib/treasury-refresh'
 import type { TimedCredits } from '$lib/modules/Place/lib/credits'
 
@@ -26,6 +32,8 @@ export interface ChatMessage {
     notice?: string
     /** Tarjetas del servidor (vista previa del pedido / pedido creado). */
     cards?: AssistantCard[]
+    /** Fotos/PDF del mensaje del usuario (metadata + miniatura, nunca el archivo). */
+    attachments?: ChatAttachment[]
 }
 
 const STORAGE_KEY = 'placepos.pwa.ai.chat.v1'
@@ -63,7 +71,9 @@ class PlaceChatStore {
                     .map((m) => ({
                         ...m,
                         is_streaming: false,
-                        cards: parseCards(m.cards)
+                        cards: parseCards(m.cards),
+                        // Historial anterior a los adjuntos: queda sin el campo.
+                        attachments: parseStoredAttachments(m.attachments)
                     }))
             }
         } catch {
@@ -125,10 +135,14 @@ class PlaceChatStore {
         refreshAfterCard(card)
     }
 
-    async send(text: string): Promise<void> {
+    /** Envía un turno; puede ir sin texto si trae adjuntos (máx 5). */
+    async send(text: string, attachments: readonly ChatAttachment[] = []): Promise<void> {
         const content = text.trim()
-        if (content.length === 0 || this.isStreaming) return
-        this.messages.push({ id: uid(), role: 'user', content, created_at: Date.now() })
+        const files = attachments.slice(0, MAX_ATTACHMENTS_PER_MESSAGE)
+        if ((content.length === 0 && files.length === 0) || this.isStreaming) return
+        const message: ChatMessage = { id: uid(), role: 'user', content, created_at: Date.now() }
+        if (files.length > 0) message.attachments = files.map((attachment) => ({ ...attachment }))
+        this.messages.push(message)
         await this.runStream()
     }
 
@@ -144,20 +158,9 @@ class PlaceChatStore {
         this.messages.push(assistant)
         this.isStreaming = true
 
-        // Un turno de Place con solo la tarjeta sigue siendo su turno: sin él,
-        // el "sí" siguiente no respondería a ningún resumen.
-        const turns = this.messages
-            .filter((m) => !m.is_streaming && !m.is_error)
-            .map((m) => ({
-                role: m.role,
-                content:
-                    m.content.trim().length === 0 &&
-                    m.role === 'assistant' &&
-                    (m.cards?.length ?? 0) > 0
-                        ? CARD_ONLY_TURN
-                        : m.content
-            }))
-            .filter((turn) => turn.content.trim().length > 0)
+        // Un turno de Place con solo la tarjeta sigue siendo su turno, y cada
+        // turno con adjuntos manda sus ids en TODAS las peticiones.
+        const turns = buildChatTurns(this.messages, CARD_ONLY_TURN)
 
         this.controller = new AbortController()
 
