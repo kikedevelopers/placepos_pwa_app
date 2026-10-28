@@ -65,21 +65,31 @@ class PosCartStore {
     }
 
     /**
-     * Fusiona solo si coinciden producto, precio Y nota (líneas con notas
-     * distintas — p. ej. "con hielo"/"sin hielo" — quedan separadas).
+     * Un producto que ya está en el carrito (con la misma nota) NUNCA abre otra
+     * línea: se suma la cantidad a UNA sola línea y esa línea toma el precio de
+     * la nueva selección (si el cajero cambió el precio, la línea se actualiza).
+     * Se prefiere la línea del mismo precio; si no hay, la más reciente. Líneas
+     * con notas distintas — p. ej. "con hielo"/"sin hielo" — quedan separadas.
      */
     addToCart(item: NewCartItem): void {
-        const existing = this.cart.find(
-            (c) =>
-                c.item_id === item.item_id &&
-                c.price === item.price &&
-                (c.note ?? '') === (item.note ?? '')
+        const productLines = this.cart.filter(
+            (c) => c.item_id === item.item_id && (c.note ?? '') === (item.note ?? '')
         )
+        const existing =
+            productLines.find((c) => c.price === item.price) ??
+            productLines[productLines.length - 1]
         if (existing) {
             this.cart = this.cart.map((c) => {
                 if (c.id !== existing.id) return c
                 const quantity = roundTo(c.quantity + item.quantity, 4)
-                return { ...c, quantity, ...lineCalc(c.price, c.cost, quantity) }
+                return {
+                    ...c,
+                    quantity,
+                    price: item.price,
+                    price_mode: item.price_mode,
+                    price_position: item.price_position,
+                    ...lineCalc(item.price, c.cost, quantity)
+                }
             })
         } else {
             this.cart = [...this.cart, { ...item, id: localId(), ...resolveLine(item) }]

@@ -13,6 +13,7 @@
     import EmptyState from '$lib/modules/Place/components/EmptyState.svelte'
     import MessageBubble from '$lib/modules/Place/components/MessageBubble.svelte'
     import Composer from '$lib/modules/Place/components/Composer.svelte'
+    import { PurchaseViewerHost } from '$lib/components/PurchaseViewer'
     import {
         CREDITS_EXHAUSTED_MESSAGE,
         describeRemaining,
@@ -173,8 +174,12 @@
             hint={describeRemaining(credits)}
             isStreaming={placeChat.isStreaming}
             {seed}
-            onsend={(text) => placeChat.send(text)}
+            onsend={(text, attachments) => placeChat.send(text, attachments)}
             onstop={() => placeChat.stop()}
         />
+
+        <!-- "Ver compra" de la tarjeta de compra creada: /place vive fuera de
+             (app), donde está montado el host global del visor. -->
+        <PurchaseViewerHost />
     {/if}
 </div>

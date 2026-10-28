@@ -18,9 +18,18 @@ const TREASURY_QUERY_KEYS: readonly (readonly unknown[])[] = [
     ['reports']
 ]
 
+/** Compra creada por Place: listado de compras y el dashboard (compras por pagar). */
+const PURCHASE_QUERY_KEYS: readonly (readonly unknown[])[] = [['purchases'], ['dashboard']]
+
+/** Consultas que quedan viejas tras una tarjeta de resultado. */
+export const queryKeysAfterCard = (card: AssistantCard): readonly (readonly unknown[])[] => {
+    if (card.kind === 'treasury_done') return TREASURY_QUERY_KEYS
+    if (card.kind === 'purchase_created') return PURCHASE_QUERY_KEYS
+    return []
+}
+
 export const refreshAfterCard = (card: AssistantCard): void => {
-    if (card.kind !== 'treasury_done') return
-    for (const queryKey of TREASURY_QUERY_KEYS) {
+    for (const queryKey of queryKeysAfterCard(card)) {
         void queryClient.invalidateQueries({ queryKey: [...queryKey] })
     }
 }

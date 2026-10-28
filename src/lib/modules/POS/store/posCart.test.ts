@@ -61,3 +61,74 @@ describe('posCart · totales de línea', () => {
         expect(posCart.cart).toHaveLength(2)
     })
 })
+
+describe('posCart · mismo producto a otro precio actualiza la línea', () => {
+    beforeEach(() => posCart.clearCart())
+
+    it('NO duplica: suma la cantidad y toma el precio nuevo (2 a 4.000 + 10 a 6.000 → 12 a 6.000)', () => {
+        posCart.addToCart(baseItem({ quantity: 2, price: 4000, cost: 3000 }))
+        posCart.addToCart(baseItem({ quantity: 10, price: 6000, cost: 3000, price_position: 1 }))
+        expect(posCart.cart).toHaveLength(1)
+        expect(posCart.cart[0]).toMatchObject({
+            quantity: 12,
+            price: 6000,
+            price_position: 1,
+            total: 72000,
+            profit: 36000,
+            margin: 50
+        })
+        expect(posCart.total).toBe(72000)
+    })
+
+    it('conserva id y nota de la línea existente', () => {
+        posCart.addToCart(baseItem({ price: 4000, note: 'sin hielo' }))
+        const { id } = posCart.cart[0]
+        posCart.addToCart(baseItem({ price: 6000, note: 'sin hielo' }))
+        expect(posCart.cart).toHaveLength(1)
+        expect(posCart.cart[0]).toMatchObject({ id, note: 'sin hielo', price: 6000 })
+    })
+
+    it('precio manual: la línea pasa a modo manual sin posición', () => {
+        posCart.addToCart(baseItem({ quantity: 1, price: 4000 }))
+        posCart.addToCart(
+            baseItem({ quantity: 1, price: 4500, price_mode: 'manual', price_position: null })
+        )
+        expect(posCart.cart).toHaveLength(1)
+        expect(posCart.cart[0]).toMatchObject({
+            quantity: 2,
+            price: 4500,
+            price_mode: 'manual',
+            price_position: null,
+            total: 9000
+        })
+    })
+
+    it('volver a un precio de lista desde uno manual regresa a modo fijo', () => {
+        posCart.addToCart(
+            baseItem({ quantity: 1, price: 4500, price_mode: 'manual', price_position: null })
+        )
+        posCart.addToCart(baseItem({ quantity: 1, price: 4000, price_position: 0 }))
+        expect(posCart.cart[0]).toMatchObject({
+            price: 4000,
+            price_mode: 'fixed',
+            price_position: 0,
+            total: 8000
+        })
+    })
+
+    it('otro producto no se ve afectado', () => {
+        posCart.addToCart(baseItem({ item_id: 1, quantity: 1, price: 4000 }))
+        posCart.addToCart(baseItem({ item_id: 2, quantity: 1, price: 900 }))
+        posCart.addToCart(baseItem({ item_id: 1, quantity: 1, price: 6000 }))
+        expect(posCart.cart).toHaveLength(2)
+        expect(posCart.cart[1]).toMatchObject({ item_id: 2, quantity: 1, price: 900, total: 900 })
+        expect(posCart.total).toBe(12000 + 900)
+    })
+
+    it('con nota distinta y otro precio sigue abriendo línea aparte', () => {
+        posCart.addToCart(baseItem({ price: 4000, note: 'con hielo' }))
+        posCart.addToCart(baseItem({ price: 6000, note: 'sin hielo' }))
+        expect(posCart.cart).toHaveLength(2)
+        expect(posCart.cart[0].price).toBe(4000)
+    })
+})

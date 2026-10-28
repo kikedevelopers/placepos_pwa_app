@@ -7,6 +7,11 @@ import {
     parseCredits,
     type AiCredits
 } from '$lib/modules/Place/lib/credits'
+import {
+    parseUploadedAttachment,
+    type ChatAttachment,
+    type ChatTurn
+} from '$lib/modules/Place/lib/attachments'
 
 /**
  * Cliente de Place (el asistente) contra pos_api — espejo del de placepos.
@@ -78,8 +83,31 @@ export const getAiGreeting = async (): Promise<AiGreeting | null> => {
     }
 }
 
+/**
+ * Sube una foto o PDF para Place (`POST /ai/attachments`, campo `file`). No
+ * gasta crédito. `Content-Type: undefined` es obligatorio: la instancia de
+ * axios fija `application/json` y sin el override serializaría el FormData a
+ * JSON (el archivo se pierde). El navegador pone el boundary del multipart.
+ *
+ * Lanza el error del interceptor (`{ status, ... }`) o uno propio si la
+ * respuesta no cumple el contrato.
+ */
+export const uploadAiAttachment = async (file: File, signal?: AbortSignal): Promise<ChatAttachment> => {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await api.post('/ai/attachments', form, {
+        headers: { 'Content-Type': undefined },
+        // Una foto de varios MB por datos móviles tarda más que el default (15 s).
+        timeout: 120000,
+        signal
+    })
+    const attachment = parseUploadedAttachment(data?.payload)
+    if (!attachment) throw { status: 500, error: 'Respuesta inválida del servidor.' }
+    return attachment
+}
+
 export interface StreamChatParams {
-    turns: Array<{ role: 'user' | 'assistant'; content: string }>
+    turns: ChatTurn[]
     signal: AbortSignal
     onEvent: (event: AiStreamEvent) => void
 }
