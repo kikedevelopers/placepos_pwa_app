@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AgentOrderChip from './AgentOrderChip.svelte'
     import AlertCircle from '@lucide/svelte/icons/alert-circle'
     import ChevronRight from '@lucide/svelte/icons/chevron-right'
     import ShoppingCart from '@lucide/svelte/icons/shopping-cart'
@@ -76,6 +77,11 @@
                 </span>
                 <ChevronRight size={18} color="hsl(215, 16%, 60%)" />
             </button>
+
+            {#if posCart.agentOrder}
+                <!-- Pedido del agente: el cajero elige o crea el cliente y registra. -->
+                <div class="border-b border-border/60 bg-card px-5 py-3"><AgentOrderChip /></div>
+            {/if}
 
             <div class="flex-1 overflow-y-auto px-5 pb-4">
                 {#if posCart.cart.length === 0}

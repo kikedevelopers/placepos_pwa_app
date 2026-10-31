@@ -11,11 +11,20 @@
     import SummaryView from './views/SummaryView.svelte'
     import CashiersReportView from './views/CashiersReportView.svelte'
     import CustomersRfmView from './views/CustomersRfmView.svelte'
+    import AgentOrdersView from '$lib/modules/AgentOrders/views/AgentOrdersView.svelte'
+    import {
+        useAgentOrdersAccess,
+        useAgentOrdersPendingCount
+    } from '$lib/modules/AgentOrders/hooks/useAgentOrdersAccess.svelte'
 
     // Mismas pestañas, nombres y permisos que el grupo "Informes" de placepos.
     // La activa vive en la URL (?tab=) para sobrevivir a recargas y enlaces.
     const permissions = usePermissions()
-    const tabs = $derived(visibleReportTabs((key) => permissions.can(key)))
+    const agentAccess = useAgentOrdersAccess()
+    const pending = useAgentOrdersPendingCount(() => agentAccess.enabled)
+    const tabs = $derived(
+        visibleReportTabs((key) => permissions.can(key), { agentOrders: agentAccess.enabled })
+    )
     const active = $derived(resolveReportTab(page.url.searchParams.get('tab'), tabs))
 
     const select = (id: string) => {
@@ -37,7 +46,11 @@
         <div class="px-5 pb-2 pt-5">
             <TabRail
                 ariaLabel="Informes"
-                tabs={tabs.map((t) => ({ id: t.id, label: t.label }))}
+                tabs={tabs.map((t) => ({
+                    id: t.id,
+                    label: t.label,
+                    badge: t.id === 'agente' ? pending.count : undefined
+                }))}
                 value={active ?? ''}
                 onChange={select}
             />
@@ -57,6 +70,8 @@
                     <CashiersReportView />
                 {:else if active === 'customers'}
                     <CustomersRfmView />
+                {:else if active === 'agente'}
+                    <AgentOrdersView />
                 {/if}
             </div>
         {/key}

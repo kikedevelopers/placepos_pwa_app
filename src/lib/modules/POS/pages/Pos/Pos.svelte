@@ -8,6 +8,16 @@
     import { cubicOut } from 'svelte/easing'
     import { browser } from '$app/environment'
     import { goto } from '$app/navigation'
+    import { page } from '$app/state'
+    import { toast } from 'svelte-sonner'
+    import { getAgentOrder, linkAgentOrderTicket } from '$lib/api/requests/agentOrders'
+    import { contactPhone, customerLabel } from '$lib/modules/AgentOrders/utils/agentOrders'
+    import {
+        agentOrderLoadWarnings,
+        buildCartFromAgentOrder,
+        type LoadedAgentOrder
+    } from '$lib/modules/POS/utils/agentOrderCart'
+    import AgentOrderChip from './components/AgentOrderChip.svelte'
     import { createMutation } from '@tanstack/svelte-query'
     import {
         createSale,
@@ -192,12 +202,79 @@
         }
     }
 
+    // "Llevar al POS" desde Reportes → Agente: `?agentOrder=<id>` carga ese
+    // pedido en el carrito, una sola vez y con los productos ya listos. No carga
+    // un pedido que ya está en un ticket vivo (evita facturarlo dos veces).
+    let agentOrderHandled = false
+    $effect(() => {
+        if (agentOrderHandled || !data) return
+        const id = Number(page.url.searchParams.get('agentOrder'))
+        if (!Number.isSafeInteger(id) || id <= 0) return
+        agentOrderHandled = true
+        const products = data
+        const url = new URL(page.url)
+        url.searchParams.delete('agentOrder')
+        void goto(url, { replaceState: true, noScroll: true, keepFocus: true })
+        void (async () => {
+            try {
+                const order = await getAgentOrder(id)
+                if (order.ticket && !order.ticket.is_voided) {
+                    toast.warning('Pedido ya tomado', {
+                        description: `Este pedido del agente ya está registrado en el ticket ${order.ticket.number}.`
+                    })
+                    return
+                }
+                const built = buildCartFromAgentOrder(order.items, products)
+                if (built.items.length === 0) {
+                    toast.error('No se pudo cargar el pedido', {
+                        description: 'Ninguno de sus productos está disponible en el POS.'
+                    })
+                    return
+                }
+                posCart.loadAgentOrder(
+                    {
+                        id: order.id,
+                        reference: order.reference,
+                        customer_label: customerLabel(order),
+                        phone: order.chat_phone ?? contactPhone(order)
+                    },
+                    built.items
+                )
+                cartOpen = true
+                const warnings = agentOrderLoadWarnings(built)
+                if (warnings.length > 0) {
+                    toast.warning('Revisa el pedido', { description: warnings.join(' '), duration: 8000 })
+                }
+            } catch (error) {
+                agentOrderHandled = false
+                toast.error('No se pudo cargar el pedido del agente', {
+                    description: getErrorMessage(error) ?? 'Inténtalo de nuevo.'
+                })
+            }
+        })()
+    })
+
+    /**
+     * Tras registrar, enlaza el ticket con el pedido del agente del que salió
+     * (queda TOMADO y la bandeja muestra su consecutivo). Best-effort: el pedido
+     * del POS ya existe; si el enlace falla, se avisa para marcarlo a mano.
+     */
+    const linkAgentOrder = (agentOrder: LoadedAgentOrder, invoiceId: number) => {
+        linkAgentOrderTicket(agentOrder.id, invoiceId).catch((error: unknown) => {
+            toast.warning('Pedido del agente sin enlazar', {
+                description: `${getErrorMessage(error) ?? 'No se pudo enlazar con el agente.'} El pedido quedó registrado; márcalo como tomado en Reportes → Agente (${agentOrder.reference}).`,
+                duration: 10000
+            })
+        })
+    }
+
     const handleRegister = () => {
         registerError = ''
         // Guard de doble-submit: si ya hay un registro en vuelo, ignorar el click.
         if ($register.isPending) return
         const cart = posCart.cart
         const customer = posCart.customer
+        const agentOrder = posCart.agentOrder
         if (cart.length === 0) return
         // Llave estable: se crea una vez por intento y se reusa hasta que el
         // registro tenga exito (o se reintente con el mismo carrito).
@@ -215,6 +292,7 @@
                     customer_name: customer?.name ?? null
                 }
                 cartOpen = false
+                if (agentOrder) linkAgentOrder(agentOrder, result.invoice_id)
                 posCart.clearCart()
                 // Registro exitoso: la proxima venta usa una llave nueva.
                 registerOperationId = null
@@ -292,6 +370,9 @@
         </div>
         <ViewModeToggle mode={viewMode} onChange={setViewMode} />
     </div>
+    {#if posCart.agentOrder}
+        <div class="px-5 pt-2"><AgentOrderChip /></div>
+    {/if}
 
     <!-- Estados / grid de productos. -->
     <div class="relative flex-1 overflow-hidden">

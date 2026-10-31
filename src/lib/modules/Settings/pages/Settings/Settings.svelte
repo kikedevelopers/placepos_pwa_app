@@ -5,6 +5,8 @@
     import PosSection from './components/PosSection.svelte'
     import AlertsSection from './components/AlertsSection.svelte'
     import ThemeSection from './components/ThemeSection.svelte'
+    import SalesAgentSection from './components/SalesAgentSection.svelte'
+    import PushSection from './components/PushSection.svelte'
     import type { SettingsView } from './types'
 
     // Navegación interna por estado (patrón del repo: no se crean sub-rutas).
@@ -23,6 +25,10 @@
         <PosSection onBack={goHome} />
     {:else if view === 'alerts'}
         <AlertsSection onBack={goHome} />
+    {:else if view === 'agent'}
+        <SalesAgentSection onBack={goHome} />
+    {:else if view === 'push'}
+        <PushSection onBack={goHome} />
     {:else if view === 'theme'}
         <ThemeSection onBack={goHome} />
     {/if}

@@ -5,13 +5,26 @@ import type { PermissionKey } from '$lib/permissions/buildPermissions'
  * "Informes" de placepos (Ventas · Cartera · Comparativa · Resumen · Cajeros ·
  * Clientes). Cada una se muestra solo si el usuario tiene su permiso.
  */
-export type ReportTabId = 'sales' | 'credits' | 'comparative' | 'summary' | 'cashiers' | 'customers'
+export type ReportTabId =
+    | 'sales'
+    | 'credits'
+    | 'comparative'
+    | 'summary'
+    | 'cashiers'
+    | 'customers'
+    | 'agente'
 
 export interface ReportTab {
     id: ReportTabId
     label: string
-    permission: PermissionKey
+    permission?: PermissionKey
 }
+
+/**
+ * Pedidos del agente de ventas. No depende de una key del catálogo: la ve quien
+ * tiene el agente habilitado y nivel administrador (igual que el servidor).
+ */
+export const AGENT_REPORT_TAB: ReportTab = { id: 'agente', label: 'Agente' }
 
 export const REPORT_TABS: readonly ReportTab[] = [
     { id: 'sales', label: 'Ventas', permission: 'canAccessSalesReport' },
@@ -23,8 +36,13 @@ export const REPORT_TABS: readonly ReportTab[] = [
 ]
 
 /** Pestañas visibles para quien tiene estos permisos (orden de placepos). */
-export const visibleReportTabs = (can: (key: PermissionKey) => boolean): ReportTab[] =>
-    REPORT_TABS.filter((tab) => can(tab.permission))
+export const visibleReportTabs = (
+    can: (key: PermissionKey) => boolean,
+    options: { agentOrders?: boolean } = {}
+): ReportTab[] => [
+    ...REPORT_TABS.filter((tab) => !tab.permission || can(tab.permission)),
+    ...(options.agentOrders ? [AGENT_REPORT_TAB] : [])
+]
 
 /**
  * Pestaña activa a partir del parámetro de la URL: si no existe o el usuario no
