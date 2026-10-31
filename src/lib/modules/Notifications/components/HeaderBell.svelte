@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte'
     import { Bell } from '@lucide/svelte'
     import { notificationsCenter } from '$lib/stores/notificationsCenter.svelte'
     import { useUnreadNotificationsCount } from '../hooks/useNotifications.svelte'
@@ -15,7 +16,7 @@
     let pulse = $state(0)
     let previous = 0
     $effect(() => {
-        if (count > previous) pulse += 1
+        if (count > previous) pulse = untrack(() => pulse) + 1
         previous = count
     })
 </script>

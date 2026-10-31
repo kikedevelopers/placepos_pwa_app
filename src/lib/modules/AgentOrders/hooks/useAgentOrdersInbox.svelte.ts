@@ -1,3 +1,4 @@
+import { untrack } from 'svelte'
 import { fromStore, toStore } from 'svelte/store'
 import {
     createInfiniteQuery,
@@ -108,7 +109,7 @@ export const useAgentOrdersInbox = (linkedOrderId: () => number | null) => {
         lastView = { key, ids }
         const arrived = newlyArrivedIds(previous, ids)
         if (arrived.length === 0) return
-        arrivedIds = [...arrivedIds, ...arrived]
+        arrivedIds = [...untrack(() => arrivedIds), ...arrived]
         // Cada llegada tiene su temporizador: otra llegada no lo cancela.
         timers.push(
             setTimeout(() => {

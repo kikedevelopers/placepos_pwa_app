@@ -55,8 +55,10 @@
     $effect(() => {
         const data = $query.data
         if (!data) return
+        // Solo se ESCRIBE estado aquí: leer `saved` volvería a disparar el
+        // efecto (bucle infinito que deja el panel sin responder).
         saved = toProfileForm(data)
-        form = structuredClone($state.snapshot(saved))
+        form = toProfileForm(data)
         errors = {}
         marks = EMPTY_MARKS
     })
