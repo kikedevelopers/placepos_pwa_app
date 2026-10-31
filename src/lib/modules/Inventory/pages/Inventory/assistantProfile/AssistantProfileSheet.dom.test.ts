@@ -102,6 +102,32 @@ describe('AssistantProfileSheet (montado)', () => {
         button('Cerrar')!.click()
         flushSync()
         expect(onClose).not.toHaveBeenCalled()
-        expect(document.body.textContent).toContain('Tienes cambios sin guardar')
+        expect(document.body.textContent).toContain('¿Descartar los cambios?')
+        // "Cancelar" vuelve a la ficha sin perder nada.
+        button('Cancelar')!.click()
+        await settle()
+        expect(document.body.textContent).not.toContain('¿Descartar los cambios?')
+        expect(document.querySelector<HTMLTextAreaElement>('#ap-description')!.value).toBe('Algo')
+    })
+
+    it('tras completar con IA, la X reacciona (pide confirmar y Descartar cierra)', async () => {
+        api.suggestAssistantProfile.mockResolvedValue({
+            description: 'Salsa ahumada.',
+            uses: ['asados'],
+            attributes: [],
+            aliases: []
+        })
+        const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+        await loaded()
+        button('Completar con IA')!.click()
+        await settle()
+        button('Cerrar')!.click()
+        await settle()
+        expect(errors).not.toHaveBeenCalled()
+        expect(document.body.textContent).toContain('¿Descartar los cambios?')
+        button('Descartar y cerrar')!.click()
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        expect(onClose).toHaveBeenCalledTimes(1)
+        errors.mockRestore()
     })
 })

@@ -3,7 +3,7 @@
     import { Bot, LoaderCircle, Sparkles, X } from '@lucide/svelte'
     import { toast } from 'svelte-sonner'
     import AdaptiveSheet from '$lib/components/AdaptiveSheet.svelte'
-    import { SkeletonList } from '$lib/components/premium'
+    import { ConfirmSheet, SkeletonList } from '$lib/components/premium'
     import { cn } from '$lib/utils'
     import { easeOutStrong } from '$lib/utils/easing'
     import { getErrorMessage } from '$lib/utils/errors'
@@ -253,19 +253,6 @@
     </div>
 
     <footer class="shrink-0 border-t border-foreground/[0.06] bg-card/95 px-5 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3 backdrop-blur-md">
-        {#if confirmDiscard}
-            <div class="flex flex-col gap-2.5" transition:fly={{ y: 8, duration: 180, easing: easeOutStrong }}>
-                <p class="text-center text-[13.5px] font-medium text-foreground">Tienes cambios sin guardar.</p>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <button type="button" onclick={close} class="h-12 rounded-[16px] bg-destructive/[0.08] text-[15px] font-semibold text-destructive transition-transform active:scale-[0.97]">
-                        Descartar
-                    </button>
-                    <button type="button" onclick={() => (confirmDiscard = false)} class="h-12 rounded-[16px] bg-foreground/[0.06] text-[15px] font-semibold text-foreground transition-transform active:scale-[0.97]">
-                        Seguir editando
-                    </button>
-                </div>
-            </div>
-        {:else}
             <div class="flex items-center gap-2.5">
                 {#if !empty && !loading && !$query.isError}
                     <button
@@ -289,6 +276,19 @@
                     Guardar ficha
                 </button>
             </div>
-        {/if}
     </footer>
 </AdaptiveSheet>
+
+<!-- Cerrar con cambios sin guardar: confirmación a la vista, encima del panel. -->
+<ConfirmSheet
+    open={confirmDiscard}
+    title="¿Descartar los cambios?"
+    message="Tienes cambios sin guardar en la ficha (incluido lo que propuso la IA). Si cierras, se pierden."
+    confirmLabel="Descartar y cerrar"
+    destructive
+    onConfirm={() => {
+        confirmDiscard = false
+        close()
+    }}
+    onClose={() => (confirmDiscard = false)}
+/>
