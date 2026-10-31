@@ -7,7 +7,8 @@
      * última pestaña nunca quede escondida tras el borde.
      */
     interface Props {
-        tabs: readonly { id: string; label: string }[]
+        /** `badge`: contador junto a la etiqueta (p. ej. pedidos por tomar). */
+        tabs: readonly { id: string; label: string; badge?: number }[]
         value: string
         onChange: (id: string) => void
         ariaLabel: string
@@ -37,13 +38,23 @@
             aria-selected={active}
             onclick={() => onChange(tab.id)}
             class={cn(
-                'h-9 shrink-0 whitespace-nowrap rounded-full px-4 text-[13.5px] transition-[background-color,color,transform] duration-200 ease-out-strong active:scale-[0.95]',
+                'inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[13.5px] transition-[background-color,color,transform] duration-200 ease-out-strong active:scale-[0.95]',
                 active
                     ? 'bg-foreground font-semibold text-background shadow-[0_6px_14px_-6px_rgba(15,23,42,0.45)]'
                     : 'bg-foreground/[0.05] font-medium text-muted-foreground'
             )}
         >
             {tab.label}
+            {#if tab.badge}
+                <span
+                    class={cn(
+                        'flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] font-bold tabular-nums',
+                        active ? 'bg-background text-foreground' : 'bg-primary text-white'
+                    )}
+                >
+                    {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+            {/if}
         </button>
     {/each}
 </div>

@@ -10,6 +10,7 @@
     import { TicketViewerHost } from '$lib/components/TicketViewer'
     import { PurchaseViewerHost } from '$lib/components/PurchaseViewer'
     import ChargeHost from '$lib/components/ChargeHost.svelte'
+    import NotificationsHost from '$lib/modules/Notifications/components/NotificationsHost.svelte'
     import SplashScreen from '$lib/components/SplashScreen.svelte'
     import { usePermissions } from '$lib/hooks/usePermissions.svelte'
     import { useProfile } from '$lib/hooks/useProfile'
@@ -84,6 +85,8 @@
         <PurchaseViewerHost />
         <!-- Host global de cobro: PaymentModal sobre el TicketViewer (Reportes). -->
         <ChargeHost />
+        <!-- Campana: panel de notificaciones, avisos de pedidos del agente y push. -->
+        <NotificationsHost />
         <!-- Multi-sucursal: auto-switch al principal y modal bloqueante de
              reconciliación cuando el admin cambia el gating. -->
         <BranchGuardGate />

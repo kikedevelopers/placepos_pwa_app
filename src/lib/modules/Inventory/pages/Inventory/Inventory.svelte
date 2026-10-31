@@ -14,6 +14,10 @@
     import { INVENTORY_FILTERS, filterInventory, type InventoryFilter } from './utils/inventoryList'
     import ProductFormModal from './components/ProductFormModal.svelte'
     import PresentationFormModal from './components/PresentationFormModal.svelte'
+    import AssistantProfileSheet, {
+        type AssistantProfileTarget
+    } from './assistantProfile/AssistantProfileSheet.svelte'
+    import { useSalesAgentEnabled } from '$lib/modules/AgentOrders/hooks/useAgentOrdersAccess.svelte'
     import CreateMenuSheet from './components/CreateMenuSheet.svelte'
 
     const role = useUserRole()
@@ -30,6 +34,23 @@
     // Form de PRESENTACIÓN (producto hijo).
     let presentationFormOpen = $state(false)
     let editingPresentation = $state<Product | null>(null)
+
+    // Ficha "Para el asistente": solo con el agente de ventas habilitado.
+    const salesAgent = useSalesAgentEnabled()
+    let assistantTarget = $state<AssistantProfileTarget | null>(null)
+    // La ficha es del producto BASE: desde una presentación se abre la de su base.
+    const openAssistantProfile = (product: Product) => {
+        if (product.parent_id === null) {
+            assistantTarget = { id: product.id, name: product.name }
+            return
+        }
+        const base = (data ?? []).find((candidate) => candidate.id === product.parent_id)
+        assistantTarget = {
+            id: product.parent_id,
+            name: base?.name ?? product.name,
+            fromPresentation: product.name
+        }
+    }
 
     const data = $derived($query.data)
     let filter = $state<InventoryFilter>('all')
@@ -148,6 +169,9 @@
         <ProductFormModal
             product={editingProduct}
             onClose={() => (productFormOpen = false)}
+            onOpenAssistant={salesAgent.enabled && editingProduct
+                ? () => openAssistantProfile(editingProduct!)
+                : undefined}
         />
     {/key}
 {/if}
@@ -157,6 +181,15 @@
         <PresentationFormModal
             presentation={editingPresentation}
             onClose={() => (presentationFormOpen = false)}
+            onOpenAssistant={salesAgent.enabled && editingPresentation
+                ? () => openAssistantProfile(editingPresentation!)
+                : undefined}
         />
+    {/key}
+{/if}
+
+{#if assistantTarget}
+    {#key assistantTarget.id}
+        <AssistantProfileSheet target={assistantTarget} onClose={() => (assistantTarget = null)} />
     {/key}
 {/if}

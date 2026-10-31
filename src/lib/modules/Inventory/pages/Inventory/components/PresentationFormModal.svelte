@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AssistantProfileEntry from '../assistantProfile/AssistantProfileEntry.svelte'
     import { untrack } from 'svelte'
     import { AlertCircle, X } from '@lucide/svelte'
     import type { Product } from '$lib/api/requests/products'
@@ -9,8 +10,10 @@
     interface Props {
         presentation: Product | null
         onClose: () => void
+        /** Abre la ficha del asistente (solo con el agente habilitado y al editar). */
+        onOpenAssistant?: () => void
     }
-    let { presentation, onClose }: Props = $props()
+    let { presentation, onClose, onOpenAssistant }: Props = $props()
 
     const ctrl = untrack(() => usePresentationForm(presentation, onClose))
     const hasParent = $derived(!!ctrl.selectedParent)
@@ -37,6 +40,10 @@
 
     <div class="flex-1 overflow-y-auto p-5">
         <div class="flex flex-col gap-4">
+            {#if onOpenAssistant}
+                <AssistantProfileEntry fromPresentation={true} onclick={onOpenAssistant} />
+            {/if}
+
             <PresentationFormFields
                 form={ctrl.form}
                 errors={ctrl.errors}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import AssistantProfileEntry from '../assistantProfile/AssistantProfileEntry.svelte'
     import { untrack } from 'svelte'
     import { AlertCircle, X } from '@lucide/svelte'
     import type { Product } from '$lib/api/requests/products'
@@ -9,8 +10,10 @@
     interface Props {
         product: Product | null
         onClose: () => void
+        /** Abre la ficha del asistente (solo con el agente habilitado y al editar). */
+        onOpenAssistant?: () => void
     }
-    let { product, onClose }: Props = $props()
+    let { product, onClose, onOpenAssistant }: Props = $props()
 
     // El modal se remonta por producto vía {#key}, así que capturar el valor
     // inicial de product/onClose es intencional (untrack silencia el aviso).
@@ -40,6 +43,10 @@
     <!-- Body -->
     <div class="flex-1 overflow-y-auto p-5">
         <div class="flex flex-col gap-4">
+            {#if onOpenAssistant}
+                <AssistantProfileEntry fromPresentation={false} onclick={onOpenAssistant} />
+            {/if}
+
             <ProductFormFields
                 form={ctrl.form}
                 errors={ctrl.errors}

@@ -3,6 +3,7 @@ import { auth } from '$lib/stores/auth.svelte'
 import { env } from '$lib/constants/env'
 import { connectRealtime, disconnectRealtime } from './socket'
 import { REALTIME_HANDLERS } from './handlers'
+import { publishRealtime } from './bus'
 
 const DEFAULT_DEBOUNCE_MS = 300
 
@@ -37,7 +38,9 @@ export const useRealtimeInvalidation = (): void => {
                 }
             }
 
-            socket.on(handler.event, () => {
+            socket.on(handler.event, (payload: unknown) => {
+                // Quien necesite el payload (aviso de un pedido) lo lee del bus.
+                publishRealtime(handler.event, payload)
                 if (debounceMs <= 0) {
                     invalidate()
                     return

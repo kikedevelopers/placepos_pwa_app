@@ -1,4 +1,5 @@
 import type { PosCustomer } from '$lib/api/requests/pos'
+import type { LoadedAgentOrder } from '../utils/agentOrderCart'
 import { roundTo } from '$lib/utils/numbers'
 
 export type CartItem = {
@@ -58,6 +59,8 @@ class PosCartStore {
     cart = $state<CartItem[]>([])
     customer = $state<PosCustomer | null>(null)
     total = $state(0)
+    /** Pedido del agente cargado con "Llevar al POS" (se enlaza al registrar). */
+    agentOrder = $state<LoadedAgentOrder | null>(null)
 
     /** Líneas en el carrito (longitud = contador del botón flotante). */
     get count(): number {
@@ -132,6 +135,18 @@ class PosCartStore {
         this.cart = []
         this.customer = null
         this.total = 0
+        this.agentOrder = null
+    }
+
+    /**
+     * "Llevar al POS": el carrito pasa a ser ESE pedido del agente (reemplaza
+     * lo que hubiera; no se mezclan pedidos).
+     */
+    loadAgentOrder(order: LoadedAgentOrder, items: NewCartItem[]): void {
+        this.cart = items.map((item) => ({ ...item, id: localId(), ...resolveLine(item) }))
+        this.customer = null
+        this.agentOrder = order
+        this.total = sumTotal(this.cart)
     }
 
     setCustomer(customer: PosCustomer): void {

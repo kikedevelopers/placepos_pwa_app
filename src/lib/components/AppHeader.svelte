@@ -4,6 +4,7 @@
     import { auth } from '$lib/stores/auth.svelte'
     import SettingsSheet from '$lib/components/SettingsSheet.svelte'
     import BranchSwitcher from '$lib/components/BranchSwitcher.svelte'
+    import HeaderBell from '$lib/modules/Notifications/components/HeaderBell.svelte'
     import { HEADER_BACKGROUND_STYLE } from '$lib/theme/statusBar'
     import { greetingFor, initialsOf, roleLabel } from './appHeader'
 
@@ -73,6 +74,9 @@
             </div>
         </div>
 
+        <div class="flex shrink-0 items-center gap-2">
+        <HeaderBell />
+
         <button
             type="button"
             aria-label="Ajustes"
@@ -82,6 +86,7 @@
         >
             <Settings size={19} color="white" strokeWidth={2} />
         </button>
+        </div>
     </div>
 
 </header>

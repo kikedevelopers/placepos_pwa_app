@@ -2,10 +2,13 @@ import type { QueryKey } from '@tanstack/svelte-query'
 
 /**
  * Mapa declarativo evento→queryKeys (espejo de `useRealtimeInvalidation` en
- * placepos). El servidor (pos_api) emite SOLO dos eventos:
- *   - `ticket:changed`    → tras crear una venta; llega al vendedor y a los
- *                           managers/owner de la company.
- *   - `dashboard:changed` → tras CUALQUIER mutación; llega solo a managers/owner.
+ * placepos). Eventos de pos_api que escucha la PWA:
+ *   - `ticket:changed`       → tras crear una venta; llega al vendedor y a los
+ *                              managers/owner de la company.
+ *   - `dashboard:changed`    → tras CUALQUIER mutación; llega solo a managers/owner.
+ *   - `agent-orders:changed` → pedido del agente nuevo/cambiado (y al dueño, los
+ *                              de sus otras sucursales).
+ *   - `alert:created`        → alerta nueva de la campana.
  * Los permisos los resuelve el servidor vía rooms; aquí solo invalidamos y el
  * refetch HTTP re-aplica el filtrado por rol.
  */
@@ -40,8 +43,26 @@ export const REALTIME_HANDLERS: RealtimeHandler[] = [
             ['expenses', 'list'],
             ['fixed-expenses', 'list'],
             ['pos', 'cash-summary'],
-            ['customers']
+            ['customers'],
+            // Cobrar o anular el ticket de un pedido del agente cambia su
+            // consecutivo (PED-x → VTA-x) en la bandeja.
+            ['agent-orders']
         ],
         debounceMs: 800
+    },
+    {
+        // Pedido del agente nuevo o cambiado por el cliente: la bandeja de
+        // Reportes → Agente y la campana, al instante. Un empleado Administrador
+        // no recibe `alert:created` (va a dueño/gerente) pero sí este evento.
+        event: 'agent-orders:changed',
+        keys: [['agent-orders'], ['app-alerts']],
+        debounceMs: 0
+    },
+    {
+        // Cualquier alerta nueva (pedido del agente, gasto fijo vencido…): la
+        // campana se actualiza sola.
+        event: 'alert:created',
+        keys: [['app-alerts']],
+        debounceMs: 0
     }
 ]

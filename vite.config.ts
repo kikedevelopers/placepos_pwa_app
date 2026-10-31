@@ -8,7 +8,9 @@ export default defineConfig({
         SvelteKitPWA({
             registerType: 'autoUpdate',
             workbox: {
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}']
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+                // Notificaciones push (mostrar el aviso y abrir la ruta al tocarlo).
+                importScripts: ['/push-sw.js']
             },
             manifest: {
                 name: 'PlacePOS',

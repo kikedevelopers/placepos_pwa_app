@@ -132,3 +132,32 @@ describe('posCart · mismo producto a otro precio actualiza la línea', () => {
         expect(posCart.cart[0].price).toBe(4000)
     })
 })
+
+describe('posCart · pedido del agente ("Llevar al POS")', () => {
+    beforeEach(() => {
+        posCart.clearCart()
+    })
+
+    const order = { id: 7, reference: 'P-1', customer_label: 'Ana', phone: '573001234567' }
+
+    it('el carrito pasa a ser el pedido: reemplaza lo anterior y calcula los totales', () => {
+        posCart.addToCart(baseItem({ item_id: 99 }))
+        posCart.setCustomer({ id: 3, name: 'Otro' })
+        posCart.loadAgentOrder(order, [
+            baseItem({ item_id: 1, quantity: 25, price: 8000, cost: 6000 }),
+            baseItem({ item_id: 2, quantity: 1, price: 4300, cost: 3000 })
+        ])
+        expect(posCart.cart.map((c) => c.item_id)).toEqual([1, 2])
+        expect(posCart.cart[0].total).toBe(200000)
+        expect(posCart.total).toBe(204300)
+        expect(posCart.customer).toBeNull()
+        expect(posCart.agentOrder).toEqual(order)
+    })
+
+    it('vaciar el carrito suelta el pedido del agente', () => {
+        posCart.loadAgentOrder(order, [baseItem()])
+        posCart.clearCart()
+        expect(posCart.agentOrder).toBeNull()
+        expect(posCart.cart).toEqual([])
+    })
+})

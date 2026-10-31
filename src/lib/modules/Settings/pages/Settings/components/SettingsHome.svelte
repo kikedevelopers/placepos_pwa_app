@@ -3,11 +3,13 @@
     import { useUserRole } from '$lib/hooks/useUserRole.svelte'
     import type { SettingsView } from '../types'
     import { visibleSettingsGroups } from '../constants/settingsMenu'
+    import { useAgentOrdersAccess } from '$lib/modules/AgentOrders/hooks/useAgentOrdersAccess.svelte'
 
     let { onOpen }: { onOpen: (view: SettingsView) => void } = $props()
 
     const role = useUserRole()
-    const groups = $derived(visibleSettingsGroups(role.role === 'owner'))
+    const agentAccess = useAgentOrdersAccess()
+    const groups = $derived(visibleSettingsGroups(role.role === 'owner', { agent: agentAccess.enabled }))
 </script>
 
 <div class="flex flex-col gap-6 px-5 pb-6 pt-5">

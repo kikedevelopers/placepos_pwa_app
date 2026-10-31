@@ -31,6 +31,23 @@ describe('pestañas de Reportes', () => {
     })
 })
 
+describe('pestaña Agente (pedidos del agente de ventas)', () => {
+    it('solo con el agente habilitado para el usuario; va al final', () => {
+        expect(visibleReportTabs(() => true).map((t) => t.id)).not.toContain('agente')
+        const tabs = visibleReportTabs(() => true, { agentOrders: true })
+        expect(tabs.at(-1)).toEqual({ id: 'agente', label: 'Agente' })
+    })
+
+    it('no depende de los permisos de informes', () => {
+        expect(visibleReportTabs(() => false, { agentOrders: true }).map((t) => t.id)).toEqual(['agente'])
+    })
+
+    it('se puede abrir por URL (?tab=agente) solo si está visible', () => {
+        expect(resolveReportTab('agente', visibleReportTabs(() => true, { agentOrders: true }))).toBe('agente')
+        expect(resolveReportTab('agente', visibleReportTabs(() => true))).toBe('sales')
+    })
+})
+
 describe('resolveReportTab', () => {
     const all = visibleReportTabs(() => true)
 
